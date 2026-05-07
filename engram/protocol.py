@@ -11,8 +11,24 @@ from __future__ import annotations
 
 from typing import Any
 
-import bittensor as bt
-from pydantic import Field
+from pydantic import BaseModel, ConfigDict, Field
+
+try:
+    import bittensor as bt
+except ImportError:
+    class _FallbackSynapse(BaseModel):
+        """Small bt.Synapse stand-in for SDK/test environments without Bittensor."""
+
+        model_config = ConfigDict(
+            arbitrary_types_allowed=True,
+            extra="allow",
+            validate_assignment=False,
+        )
+
+    class _BittensorFallback:
+        Synapse = _FallbackSynapse
+
+    bt = _BittensorFallback()
 
 
 # ── 1. Ingest ──────────────────────────────────────────────────────────────────
