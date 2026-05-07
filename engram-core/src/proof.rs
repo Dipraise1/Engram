@@ -132,6 +132,25 @@ pub fn generate_response(challenge: &Challenge, embedding: &[f32]) -> ProofRespo
     }
 }
 
+/// Generate a proof response from raw challenge fields.
+///
+/// This is useful at protocol boundaries where the miner receives JSON fields
+/// rather than a Rust Challenge object.
+pub fn generate_response_from_parts(
+    cid: &str,
+    nonce: [u8; 32],
+    expires_at: u64,
+    embedding: &[f32],
+) -> ProofResponse {
+    let challenge = Challenge {
+        nonce,
+        cid: cid.to_string(),
+        issued_at: 0,
+        expires_at,
+    };
+    generate_response(&challenge, embedding)
+}
+
 // ── Validator Side — batch CIDs ───────────────────────────────────────────────
 
 /// Generate a batch challenge covering multiple CIDs in one round trip.
@@ -338,6 +357,24 @@ mod tests {
         let challenge = generate_challenge("v1::abc123", 60);
         let response = generate_response(&challenge, &emb);
         assert!(verify_response(&challenge, &response, &emb));
+    }
+
+    #[test]
+    fn response_from_parts_matches_challenge_response() {
+        let emb = dummy_embedding();
+        let challenge = generate_challenge("v1::abc123", 60);
+        let response = generate_response(&challenge, &emb);
+        let from_parts = generate_response_from_parts(
+            &challenge.cid,
+            challenge.nonce,
+            challenge.expires_at,
+            &emb,
+        );
+        assert_eq!(from_parts.cid, response.cid);
+        assert_eq!(from_parts.nonce_hex, response.nonce_hex);
+        assert_eq!(from_parts.embedding_hash, response.embedding_hash);
+        assert_eq!(from_parts.proof, response.proof);
+        assert!(verify_response(&challenge, &from_parts, &emb));
     }
 
     #[test]

@@ -51,10 +51,17 @@ from engram.utils.logging import setup_logging
 
 setup_logging(os.getenv("LOG_LEVEL", "INFO"))
 
+try:
+    import engram_core
+    _RUST_PROOF_AVAILABLE = hasattr(engram_core, "generate_response_from_parts")
+except ImportError:
+    engram_core = None
+    _RUST_PROOF_AVAILABLE = False
+
 
 # ── Storage proof helpers ─────────────────────────────────────────────────────
-# Mirrors Rust proof.rs logic exactly: SHA-256 over little-endian f32 bytes,
-# then HMAC-SHA256 with nonce as key and embedding_hash hex as message.
+# Rust is the source of truth. The Python path is a fallback for local/dev
+# environments that have not rebuilt engram-core yet.
 
 def _hash_embedding(embedding: list[float]) -> str:
     emb_bytes = struct.pack(f"<{len(embedding)}f", *embedding)
@@ -71,6 +78,23 @@ def _proof_response(nonce_hex: str, embedding: list[float]) -> tuple[str, str]:
     embedding_hash = _hash_embedding(embedding)
     proof = _compute_proof(nonce, embedding_hash)
     return embedding_hash, proof
+
+
+def _proof_response_for_challenge(
+    cid: str,
+    nonce_hex: str,
+    expires_at: int,
+    embedding: list[float],
+) -> tuple[str, str]:
+    if _RUST_PROOF_AVAILABLE and engram_core is not None:
+        response = engram_core.generate_response_from_parts(
+            cid,
+            nonce_hex,
+            expires_at,
+            embedding,
+        )
+        return response.embedding_hash, response.proof
+    return _proof_response(nonce_hex, embedding)
 
 
 # ── Chat history store (SQLite) ───────────────────────────────────────────────
@@ -672,7 +696,12 @@ async def run() -> None:
             if record is None:
                 return web.json_response({"error": f"Nothing stored under that CID ({cid[:20]}…). This miner may not hold a replica of it."}, status=404)
 
-            embedding_hash, proof = _proof_response(nonce_hex, record.embedding.tolist())
+            embedding_hash, proof = _proof_response_for_challenge(
+                cid,
+                nonce_hex,
+                expires_at,
+                record.embedding.tolist(),
+            )
             _challenge_total += 1
             _challenge_ok += 1
             return web.json_response({"embedding_hash": embedding_hash, "proof": proof})

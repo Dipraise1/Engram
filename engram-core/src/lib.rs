@@ -117,6 +117,24 @@ fn generate_response(challenge: &Challenge, embedding: Vec<f32>) -> ProofRespons
 }
 
 #[pyfunction]
+fn generate_response_from_parts(
+    cid: &str,
+    nonce_hex: &str,
+    expires_at: u64,
+    embedding: Vec<f32>,
+) -> PyResult<ProofResponse> {
+    let nonce_vec = hex::decode(nonce_hex)
+        .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("invalid nonce hex: {e}")))?;
+    let nonce: [u8; 32] = nonce_vec
+        .try_into()
+        .map_err(|_| pyo3::exceptions::PyValueError::new_err("nonce must be exactly 32 bytes"))?;
+
+    Ok(ProofResponse {
+        inner: proof::generate_response_from_parts(cid, nonce, expires_at, &embedding),
+    })
+}
+
+#[pyfunction]
 fn verify_response(
     challenge: &Challenge,
     response: &ProofResponse,
@@ -238,6 +256,7 @@ fn engram_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<ProofResponse>()?;
     m.add_function(wrap_pyfunction!(generate_challenge, m)?)?;
     m.add_function(wrap_pyfunction!(generate_response, m)?)?;
+    m.add_function(wrap_pyfunction!(generate_response_from_parts, m)?)?;
     m.add_function(wrap_pyfunction!(verify_response, m)?)?;
     // Batch proofs
     m.add_class::<BatchChallenge>()?;

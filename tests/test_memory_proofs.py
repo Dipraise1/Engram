@@ -24,6 +24,7 @@ except ImportError:
     _RUST = False
 
 _BATCH = _RUST and hasattr(engram_core, "generate_batch_challenge")
+_PARTS = _RUST and hasattr(engram_core, "generate_response_from_parts")
 
 pytestmark = pytest.mark.skipif(not _RUST, reason="engram_core Rust module not built")
 
@@ -118,6 +119,24 @@ def test_response_fields() -> None:
     assert resp.nonce_hex == ch.nonce_hex
     assert len(resp.embedding_hash) == 64
     assert len(resp.proof) == 64
+
+
+@pytest.mark.skipif(not _PARTS, reason="raw proof response API not in installed wheel (rebuild needed)")
+def test_response_from_parts_matches_response() -> None:
+    cid = make_cid(EMB_A)
+    ch = engram_core.generate_challenge(cid, 60)
+    resp = engram_core.generate_response(ch, EMB_A)
+    from_parts = engram_core.generate_response_from_parts(
+        ch.cid,
+        ch.nonce_hex,
+        ch.expires_at,
+        EMB_A,
+    )
+    assert from_parts.cid == resp.cid
+    assert from_parts.nonce_hex == resp.nonce_hex
+    assert from_parts.embedding_hash == resp.embedding_hash
+    assert from_parts.proof == resp.proof
+    assert engram_core.verify_response(ch, from_parts, EMB_A)
 
 
 def test_each_challenge_has_unique_nonce() -> None:

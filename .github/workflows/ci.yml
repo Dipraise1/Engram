@@ -111,6 +111,14 @@ jobs:
           challenge = engram_core.generate_challenge(cid, 30)
           response = engram_core.generate_response(challenge, [0.1, 0.2, 0.3])
           assert engram_core.verify_response(challenge, response, [0.1, 0.2, 0.3])
+          response2 = engram_core.generate_response_from_parts(
+              challenge.cid,
+              challenge.nonce_hex,
+              challenge.expires_at,
+              [0.1, 0.2, 0.3],
+          )
+          assert response2.proof == response.proof
+          assert response2.embedding_hash == response.embedding_hash
 
           # Batch proof
           cid2 = engram_core.generate_cid([0.4, 0.5, 0.6], {}, 'v1')
