@@ -203,15 +203,11 @@ class QdrantStore(VectorStore):
     ) -> list[dict]:
         from qdrant_client.models import Filter, FieldCondition, MatchValue
 
-        qdrant_filter = None
-        conditions = []
-        if namespace != _PUBLIC_NS:
-            conditions.append(FieldCondition(key="namespace", match=MatchValue(value=namespace)))
+        conditions = [FieldCondition(key="_ns", match=MatchValue(value=namespace))]
         if filter:
             for k, v in filter.items():
                 conditions.append(FieldCondition(key=k, match=MatchValue(value=str(v))))
-        if conditions:
-            qdrant_filter = Filter(must=conditions)
+        qdrant_filter = Filter(must=conditions)
 
         results, _ = self._client.scroll(
             collection_name=self._collection,
@@ -221,8 +217,12 @@ class QdrantStore(VectorStore):
             with_payload=True,
             with_vectors=False,
         )
+        _INTERNAL = {"cid", "_ns"}
         return [
-            {"cid": r.payload.get("cid", ""), "metadata": r.payload.get("metadata", {})}
+            {
+                "cid": (r.payload or {}).get("cid", ""),
+                "metadata": {k: v for k, v in (r.payload or {}).items() if k not in _INTERNAL},
+            }
             for r in results
         ]
 
