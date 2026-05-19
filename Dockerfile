@@ -3,7 +3,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Rust toolchain (needed for maturin / engram-core) + runtime libs for faiss/numpy
+# Rust toolchain (needed for maturin / engram-core) + runtime libs for faiss/bittensor
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl build-essential pkg-config libssl-dev git \
     libgomp1 libgmp-dev && \
@@ -12,20 +12,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python deps from pyproject.toml (canonical source — cached layer)
+COPY pyproject.toml README.md ./
+COPY engram/ engram/
+RUN pip install --no-cache-dir ".[node]"
 
 # Build and install engram-core Rust extension
-COPY engram-core/ engram-core/
 COPY Cargo.toml Cargo.lock ./
-RUN pip install maturin && \
+COPY engram-core/ engram-core/
+RUN pip install --no-cache-dir maturin && \
     maturin build --manifest-path engram-core/Cargo.toml --release --out /dist && \
     pip install /dist/*.whl
 
-# Copy source
-COPY engram/ engram/
 COPY neurons/miner.py neurons/miner.py
-
 RUN mkdir -p data
 
 ENV MINER_PORT=8091
