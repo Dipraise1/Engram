@@ -13,6 +13,9 @@
 [![Dashboard](https://img.shields.io/badge/dashboard-theengram.space-blueviolet.svg)](https://theengram.space)
 [![Mobile](https://img.shields.io/badge/mobile-mine%20on%20phone-brightgreen.svg)](docs/cloud-mining.md)
 [![Akash](https://img.shields.io/badge/compute-akash%20network-red.svg)](https://akash.network)
+[![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![Roadmap](https://img.shields.io/badge/roadmap-view-blue.svg)](ROADMAP.md)
+[![Tests](https://img.shields.io/badge/tests-355%20passing-success.svg)](tests/)
 
 ---
 

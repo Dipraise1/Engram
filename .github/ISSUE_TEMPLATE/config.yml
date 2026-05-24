@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & Discussion
+    url: https://github.com/Dipraise1/Engram/discussions
+    about: Ask questions, share ideas, or discuss the project with the community.
+  - name: Miner & Validator Setup Help
+    url: https://github.com/Dipraise1/Engram/discussions/categories/setup-help
+    about: Trouble running a miner or validator? Ask here before opening an issue.
+  - name: Bittensor Discord
+    url: https://discord.gg/bittensor
+    about: General Bittensor ecosystem discussion and faucet requests.
