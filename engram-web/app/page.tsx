@@ -123,17 +123,25 @@ function Navbar() {
     return () => { document.body.style.overflow = ""; };
   }, [mobileOpen]);
 
+  const desktopLinks = [
+    { href: "#protocol", label: "Protocol" },
+    { href: "#features", label: "Features" },
+    { href: "#roadmap", label: "Roadmap" },
+    { href: "#mine", label: "Mine" },
+    { href: "/docs", label: "Docs" },
+  ];
+
   const navLinks = [
-    { href: "#protocol", label: "Protocol", external: false },
-    { href: "#features", label: "Features", external: false },
-    { href: "#roadmap", label: "Roadmap", external: false },
-    { href: "#sdk", label: "SDK", external: false },
-    { href: "#mine", label: "Mine", external: false },
-    { href: "#cloud-mine", label: "Cloud Mine", external: false },
-    { href: "/playground", label: "Playground", external: false },
-    { href: "/memory", label: "Memory AI", external: false },
-    { href: "/dashboard", label: "Dashboard", external: false },
-    { href: "/docs", label: "Docs", external: false },
+    { href: "#protocol", label: "Protocol" },
+    { href: "#features", label: "Features" },
+    { href: "#roadmap", label: "Roadmap" },
+    { href: "#sdk", label: "SDK" },
+    { href: "#mine", label: "Mine" },
+    { href: "#cloud-mine", label: "Cloud Mine" },
+    { href: "/playground", label: "Playground" },
+    { href: "/memory", label: "Memory AI" },
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/docs", label: "Docs" },
   ];
 
   return (
@@ -150,12 +158,12 @@ function Navbar() {
             </span>
           </div>
 
-          <div className="hidden md:flex items-center gap-8 text-[13px] text-white/65 font-normal">
-            {navLinks.map(({ href, label }) =>
+          <div className="hidden md:flex items-center gap-7 text-[14px] text-white/65 font-normal">
+            {desktopLinks.map(({ href, label }) =>
               href.startsWith("/") ? (
-                <Link key={href} href={href} className="hover:text-white/70 transition-colors">{label}</Link>
+                <Link key={href} href={href} className="hover:text-white transition-colors">{label}</Link>
               ) : (
-                <a key={href} href={href} className="hover:text-white/70 transition-colors">{label}</a>
+                <a key={href} href={href} className="hover:text-white transition-colors">{label}</a>
               )
             )}
           </div>
