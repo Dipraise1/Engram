@@ -160,6 +160,23 @@ curl http://localhost:8091/health
 
 ---
 
+## HTTP API Reference
+
+The miner HTTP API is documented as OpenAPI 3.1 in [`openapi.json`](openapi.json).
+Browse it locally through the Redoc page at [`miner-openapi.html`](miner-openapi.html).
+
+Regenerate the spec after changing miner routes:
+
+```bash
+python scripts/generate_openapi.py
+python scripts/generate_openapi.py --check
+```
+
+The OpenAPI generator reads the same route registry used by `neurons/miner.py`,
+so CI can catch stale docs when an endpoint is added, removed, or renamed.
+
+---
+
 ## systemd Service
 
 ```ini
