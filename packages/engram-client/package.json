@@ -1,0 +1,28 @@
+{
+  "name": "@engram/client",
+  "version": "0.1.0",
+  "description": "TypeScript client for Engram — decentralized AI memory on Bittensor",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist/", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublish": "npm run build"
+  },
+  "keywords": ["engram", "bittensor", "ai", "memory", "vector-database", "subnet"],
+  "license": "MIT",
+  "dependencies": {
+    "@polkadot/util-crypto": "^12.0.0",
+    "@polkadot/keyring": "^12.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0",
+    "@types/node": "^20.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
