@@ -38,6 +38,11 @@ jobs:
       - name: Run tests
         run: python -m pytest tests/ -q --tb=short --cov=engram --cov-report=term-missing
 
+      - name: Check OpenAPI spec sync
+        run: |
+          python scripts/generate_openapi.py
+          git diff --exit-code docs/openapi.json || (echo "OpenAPI spec is out of sync. Run python scripts/generate_openapi.py and commit docs/openapi.json." && exit 1)
+
   # ── Type checking ─────────────────────────────────────────────────────────────
   typecheck:
     runs-on: ubuntu-latest
