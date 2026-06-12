@@ -1,0 +1,34 @@
+{
+  "name": "@engram/client",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "jest",
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@polkadot/keyring": "^13.3.1",
+    "@polkadot/util-crypto": "^13.3.1",
+    "axios": "^1.7.2",
+    "bs58": "^6.0.0",
+    "tweetnacl": "^1.0.3",
+    "tweetnacl-util": "^0.15.1",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.14.9",
+    "@types/uuid": "^10.0.0",
+    "jest": "^29.7.0",
+    "jest-util": "^30.4.1",
+    "ts-jest": "^29.1.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.3"
+  },
+  "types": "dist/index.d.ts"
+}
