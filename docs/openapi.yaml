@@ -1,0 +1,311 @@
+openapi: "3.0.3"
+info:
+  title: Engram Miner HTTP API
+  description: |
+    HTTP API served by Engram miners (aiohttp). Endpoints for embedding
+    ingestion, approximate nearest-neighbour search, storage proofs, and
+    health checks. All write endpoints support sr25519 hotkey-signed
+    authentication.
+  version: "1.0.0"
+  contact:
+    name: Engram
+    url: https://github.com/Dipraise1/Engram
+
+servers:
+  - url: http://{miner_host}:{miner_port}
+    description: Engram miner instance
+    variables:
+      miner_host:
+        default: "127.0.0.1"
+      miner_port:
+        default: "8091"
+
+tags:
+  - name: Ingestion
+    description: Store embeddings and text
+  - name: Query
+    description: Approximate nearest-neighbour search
+  - name: Proofs
+    description: Storage proof challenges
+  - name: Health
+    description: Liveness and metrics
+
+components:
+  securitySchemes:
+    HotkeySignature:
+      type: apiKey
+      in: header
+      name: X-Engram-Signature
+      description: |
+        sr25519 hotkey-signed request. The caller adds three fields to
+        every request body: `hotkey` (SS58 address), `nonce` (Unix ms),
+        and `signature` (hex sr25519 sig over `{nonce}:{endpoint}:{body_hash}`).
+        See neurons/miner.py and engram/miner/auth.py for full details.
+
+  schemas:
+    HotkeyAuth:
+      type: object
+      required: [hotkey, nonce, signature]
+      properties:
+        hotkey:
+          type: string
+          description: Bittensor SS58 hotkey address of the signer
+          example: "5FHneW46...abc123"
+        nonce:
+          type: integer
+          format: int64
+          description: Unix milliseconds for replay protection (±30s window)
+          example: 1712345678123
+        signature:
+          type: string
+          description: Hex-encoded sr25519 signature over canonical message
+          example: "0xdeadbeef..."
+
+    IngestRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          description: Raw text to embed and store (mutually exclusive with raw_embedding)
+          example: "Hello, Engram!"
+        raw_embedding:
+          type: array
+          items:
+            type: number
+          description: Pre-computed embedding vector (skips miner embedding step)
+        metadata:
+          type: object
+          description: Arbitrary key-value metadata stored alongside the vector
+        model_version:
+          type: string
+          default: "v1"
+          description: Subnet model epoch version for CID generation
+        namespace:
+          type: string
+          description: Private collection name
+        namespace_hotkey:
+          type: string
+          description: SS58 hotkey owning the namespace (sig-based auth)
+        namespace_sig:
+          type: string
+          description: sr25519 hex signature for namespace access
+        namespace_timestamp_ms:
+          type: integer
+          format: int64
+          description: Unix ms for namespace_sig replay prevention
+
+    IngestResponse:
+      type: object
+      properties:
+        cid:
+          type: string
+          description: Content identifier of the stored embedding
+          example: "bafy...xyz"
+        error:
+          type: string
+          description: Error message if ingestion failed
+
+    QueryRequest:
+      type: object
+      properties:
+        query_text:
+          type: string
+          description: Natural language query text (mutually exclusive with query_vector)
+        query_vector:
+          type: array
+          items:
+            type: number
+          description: Pre-computed query embedding vector
+        top_k:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+          description: Number of results to return
+        namespace:
+          type: string
+          description: Private collection to search within
+
+    QueryResult:
+      type: object
+      properties:
+        cid:
+          type: string
+          description: Content identifier of the matched document
+        score:
+          type: number
+          description: Similarity score (higher = more similar)
+        metadata:
+          type: object
+          description: Document metadata stored at ingestion time
+
+    QueryResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/QueryResult'
+          description: Results ordered by descending similarity
+        latency_ms:
+          type: number
+          description: Miner-reported query latency in milliseconds
+        error:
+          type: string
+          description: Error message if query failed
+
+    ChallengeRequest:
+      type: object
+      properties:
+        cid:
+          type: string
+          description: Content identifier to prove storage of
+        nonce_hex:
+          type: string
+          description: Validator-supplied nonce for proof generation
+        expires_at:
+          type: integer
+          format: int64
+          description: Unix timestamp when challenge expires
+
+    ChallengeResponse:
+      type: object
+      properties:
+        embedding_hash:
+          type: string
+          description: SHA-256 hex of the stored embedding
+        proof:
+          type: string
+          description: HMAC proof over embedding_hash, keyed with SHA-256(hotkey||nonce)
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "ok"
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+
+paths:
+  /IngestSynapse:
+    post:
+      tags: [Ingestion]
+      summary: Store an embedding
+      description: |
+        Receives text or a pre-computed embedding, generates an embedding
+        vector (if text provided), stores it in the local vector store,
+        and returns a content identifier (CID).
+
+        Supports private collections via namespace authentication
+        (sig-based preferred, key-based deprecated).
+      operationId: ingestSynapse
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/IngestRequest'
+                - $ref: '#/components/schemas/HotkeyAuth'
+      responses:
+        "200":
+          description: Embedding stored successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestResponse'
+        "400":
+          description: Bad request (missing fields, invalid embedding)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Invalid or missing hotkey signature
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /QuerySynapse:
+    post:
+      tags: [Query]
+      summary: Search for similar embeddings
+      description: |
+        Performs approximate nearest-neighbour search. Accepts either
+        natural-language `query_text` or a pre-computed `query_vector`.
+        Returns the top-K most similar stored embeddings with scores
+        and metadata.
+      operationId: querySynapse
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/QueryRequest'
+                - $ref: '#/components/schemas/HotkeyAuth'
+      responses:
+        "200":
+          description: Query results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /ChallengeSynapse:
+    post:
+      tags: [Proofs]
+      summary: Prove storage of a specific CID
+      description: |
+        Validator issues a challenge to verify the miner actually holds
+        the data for a given CID. The miner computes an HMAC proof over
+        the embedding hash, keyed per-validator.
+      operationId: challengeSynapse
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/ChallengeRequest'
+                - $ref: '#/components/schemas/HotkeyAuth'
+      responses:
+        "200":
+          description: Proof generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChallengeResponse'
+        "400":
+          description: Bad request or CID not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /health:
+    get:
+      tags: [Health]
+      summary: Liveness probe
+      description: Returns 200 OK when the miner is running.
+      operationId: healthCheck
+      responses:
+        "200":
+          description: Miner is alive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
