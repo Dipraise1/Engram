@@ -1,13 +1,14 @@
+import ast
 import json
-import os
 from pathlib import Path
 from typing import Any
+import sys
 
 from pydantic.json_schema import models_json_schema
 
-# We need to import the protocol models
-import sys
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Import protocol models
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
 
 from engram.protocol import (
     IngestSynapse,
@@ -17,8 +18,38 @@ from engram.protocol import (
     KeyShareRetrieve,
 )
 
+def extract_routes_from_miner() -> list[dict[str, Any]]:
+    miner_path = project_root / 'neurons' / 'miner.py'
+    with open(miner_path, 'r', encoding='utf-8') as f:
+        source = f.read()
+
+    tree = ast.parse(source)
+    
+    # Extract handler docstrings
+    handlers = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.AsyncFunctionDef):
+            doc = ast.get_docstring(node)
+            handlers[node.name] = doc
+
+    # Extract routes
+    routes = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call):
+            if isinstance(node.func, ast.Attribute) and node.func.attr in ['add_post', 'add_get', 'add_patch', 'add_delete']:
+                if isinstance(node.func.value, ast.Attribute) and node.func.value.attr == 'router':
+                    method = node.func.attr.split('_')[1]
+                    path = node.args[0].value
+                    handler = node.args[1].id
+                    routes.append({
+                        'method': method,
+                        'path': path,
+                        'handler': handler,
+                        'summary': handlers.get(handler) or handler.replace('handle_', '').replace('_', ' ').title()
+                    })
+    return routes
+
 def generate_openapi() -> dict[str, Any]:
-    # 1. Generate schemas from Pydantic models
     models = [
         IngestSynapse,
         QuerySynapse,
@@ -33,10 +64,8 @@ def generate_openapi() -> dict[str, Any]:
         ref_template="#/components/schemas/{model}",
     )
 
-    # Clean up definitions vs $defs
     defs = schemas.get("$defs", {})
     
-    # 2. Build the base OpenAPI dict
     openapi = {
         "openapi": "3.0.3",
         "info": {
@@ -62,69 +91,66 @@ def generate_openapi() -> dict[str, Any]:
         "paths": {},
     }
 
-    # 3. Helper to define an endpoint mapping to a synapse
-    def add_endpoint(path: str, method: str, model_name: str, summary: str):
+    routes = extract_routes_from_miner()
+    
+    # Map Synapse models to paths
+    synapse_models = {
+        "/IngestSynapse": "IngestSynapse",
+        "/QuerySynapse": "QuerySynapse",
+        "/ChallengeSynapse": "ChallengeSynapse",
+        "/KeyShareSynapse": "KeyShareSynapse",
+        "/KeyShareRetrieve": "KeyShareRetrieve",
+    }
+
+    for route in routes:
+        path = route['path']
+        method = route['method']
+        summary = route['summary'].split('\n')[0] # Use first line of docstring
+        
         if path not in openapi["paths"]:
             openapi["paths"][path] = {}
             
-        openapi["paths"][path][method] = {
+        endpoint_def = {
             "summary": summary,
-            "requestBody": {
+            "responses": {
+                "200": {
+                    "description": "Successful operation"
+                }
+            }
+        }
+        
+        # Attach request body and response schema if it's a known synapse
+        if path in synapse_models:
+            model_name = synapse_models[path]
+            endpoint_def["requestBody"] = {
                 "required": True,
                 "content": {
                     "application/json": {
                         "schema": {"$ref": f"#/components/schemas/{model_name}"}
                     }
                 }
-            },
-            "responses": {
-                "200": {
-                    "description": "Successful operation",
-                    "content": {
-                        "application/json": {
-                            # The response is typically just the same Synapse model returned
-                            # with the response fields populated
-                            "schema": {"$ref": f"#/components/schemas/{model_name}"}
-                        }
+            }
+            endpoint_def["responses"]["200"]["content"] = {
+                "application/json": {
+                    "schema": {"$ref": f"#/components/schemas/{model_name}"}
+                }
+            }
+        elif method in ['post', 'patch']:
+            # Generic JSON request body for other methods
+            endpoint_def["requestBody"] = {
+                "content": {
+                    "application/json": {
+                        "schema": {"type": "object"}
                     }
                 }
             }
-        }
-
-    # 4. Map endpoints
-    add_endpoint("/IngestSynapse", "post", "IngestSynapse", "Ingest an embedding or text")
-    add_endpoint("/QuerySynapse", "post", "QuerySynapse", "Query vectors (approximate nearest neighbor)")
-    add_endpoint("/ChallengeSynapse", "post", "ChallengeSynapse", "Respond to a storage proof challenge")
-    add_endpoint("/KeyShareSynapse", "post", "KeyShareSynapse", "Store a Shamir key share")
-    add_endpoint("/KeyShareRetrieve", "post", "KeyShareRetrieve", "Retrieve a stored Shamir key share")
-
-    # Add standard endpoints that might not have a full Synapse schema
-    openapi["paths"]["/health"] = {
-        "get": {
-            "summary": "Liveness probe",
-            "responses": {
-                "200": {
-                    "description": "OK"
-                }
-            }
-        }
-    }
-    
-    openapi["paths"]["/metrics"] = {
-        "get": {
-            "summary": "Prometheus metrics",
-            "responses": {
-                "200": {
-                    "description": "Prometheus text format"
-                }
-            }
-        }
-    }
+            
+        openapi["paths"][path][method] = endpoint_def
 
     return openapi
 
 if __name__ == "__main__":
-    docs_dir = Path(__file__).parent.parent / "docs"
+    docs_dir = project_root / "docs"
     docs_dir.mkdir(exist_ok=True)
     
     openapi_spec = generate_openapi()
@@ -133,4 +159,4 @@ if __name__ == "__main__":
     with out_path.open("w", encoding="utf-8") as f:
         json.dump(openapi_spec, f, indent=2)
         
-    print(f"✅ Generated OpenAPI spec at {out_path}")
+    print(f"Generated OpenAPI spec at {out_path}")

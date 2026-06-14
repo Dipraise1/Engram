@@ -568,17 +568,7 @@
   "paths": {
     "/IngestSynapse": {
       "post": {
-        "summary": "Ingest an embedding or text",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/IngestSynapse"
-              }
-            }
-          }
-        },
+        "summary": "Ingest",
         "responses": {
           "200": {
             "description": "Successful operation",
@@ -590,22 +580,22 @@
               }
             }
           }
-        }
-      }
-    },
-    "/QuerySynapse": {
-      "post": {
-        "summary": "Query vectors (approximate nearest neighbor)",
+        },
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/QuerySynapse"
+                "$ref": "#/components/schemas/IngestSynapse"
               }
             }
           }
-        },
+        }
+      }
+    },
+    "/QuerySynapse": {
+      "post": {
+        "summary": "Query",
         "responses": {
           "200": {
             "description": "Successful operation",
@@ -617,22 +607,22 @@
               }
             }
           }
-        }
-      }
-    },
-    "/ChallengeSynapse": {
-      "post": {
-        "summary": "Respond to a storage proof challenge",
+        },
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ChallengeSynapse"
+                "$ref": "#/components/schemas/QuerySynapse"
               }
             }
           }
-        },
+        }
+      }
+    },
+    "/ChallengeSynapse": {
+      "post": {
+        "summary": "Challenge",
         "responses": {
           "200": {
             "description": "Successful operation",
@@ -644,22 +634,192 @@
               }
             }
           }
-        }
-      }
-    },
-    "/KeyShareSynapse": {
-      "post": {
-        "summary": "Store a Shamir key share",
+        },
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/KeyShareSynapse"
+                "$ref": "#/components/schemas/ChallengeSynapse"
               }
             }
           }
+        }
+      }
+    },
+    "/namespace": {
+      "post": {
+        "summary": "Namespace management \u2014 create, delete, rotate key. Localhost only.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
         },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AttestNamespace": {
+      "post": {
+        "summary": "Attest a namespace to a Bittensor hotkey.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/attestation/{namespace}": {
+      "get": {
+        "summary": "GET /attestation/{namespace} \u2014 return trust info for a namespace.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/chat-history/{user_id}": {
+      "get": {
+        "summary": "GET /chat-history/{user_id}?conv_id=X \u2014 load a user's chat history.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/chat-history": {
+      "post": {
+        "summary": "POST /chat-history \u2014 save a user's chat history.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversations/{user_id}": {
+      "get": {
+        "summary": "GET /conversations/{user_id} \u2014 list all conversations for a user.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/conversations": {
+      "post": {
+        "summary": "POST /conversations \u2014 create a new conversation.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversations/{conv_id}": {
+      "patch": {
+        "summary": "PATCH /conversations/{conv_id} \u2014 rename a conversation.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "DELETE /conversations/{conv_id}?user_id=X \u2014 delete a conversation.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/retrieve/{cid}": {
+      "get": {
+        "summary": "GET /retrieve/{cid} \u2014 return stored metadata for a CID.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      },
+      "delete": {
+        "summary": "DELETE /retrieve/{cid} \u2014 permanently remove a stored memory.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/RepairSynapse": {
+      "post": {
+        "summary": "POST /RepairSynapse \u2014 return full embedding for a CID so the validator",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/KeyShareSynapse": {
+      "post": {
+        "summary": "POST /KeyShareSynapse \u2014 store a Shamir key share for a namespace.",
         "responses": {
           "200": {
             "description": "Successful operation",
@@ -671,22 +831,22 @@
               }
             }
           }
-        }
-      }
-    },
-    "/KeyShareRetrieve": {
-      "post": {
-        "summary": "Retrieve a stored Shamir key share",
+        },
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/KeyShareRetrieve"
+                "$ref": "#/components/schemas/KeyShareSynapse"
               }
             }
           }
-        },
+        }
+      }
+    },
+    "/KeyShareRetrieve": {
+      "post": {
+        "summary": "POST /KeyShareRetrieve \u2014 return this miner's share for a namespace.",
         "responses": {
           "200": {
             "description": "Successful operation",
@@ -698,25 +858,123 @@
               }
             }
           }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeyShareRetrieve"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/list": {
+      "post": {
+        "summary": "POST /list \u2014 paginate and filter stored memories.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
         }
       }
     },
     "/health": {
       "get": {
-        "summary": "Liveness probe",
+        "summary": "Health",
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/stats": {
+      "get": {
+        "summary": "Public stats endpoint \u2014 rich counters for the dashboard.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/metagraph": {
+      "get": {
+        "summary": "Public metagraph snapshot \u2014 returns all registered neurons for the leaderboard.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
           }
         }
       }
     },
     "/metrics": {
       "get": {
-        "summary": "Prometheus metrics",
+        "summary": "Prometheus metrics \u2014 localhost only to avoid leaking operational data.",
         "responses": {
           "200": {
-            "description": "Prometheus text format"
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/wallet-stats": {
+      "get": {
+        "summary": "Wallet Stats",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/wallet-stats/{hotkey}": {
+      "get": {
+        "summary": "Wallet Stats",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/commitment": {
+      "get": {
+        "summary": "GET /commitment \u2014 returns the Merkle root of this miner's full memory corpus.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/prove-memory": {
+      "post": {
+        "summary": "POST /prove-memory \u2014 return a Merkle inclusion proof for one CID.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
           }
         }
       }
