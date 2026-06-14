@@ -305,3 +305,20 @@ curl http://localhost:8091/stats
 **Proof challenges failing**
 - Check miner logs for `Challenge error:` messages.
 - Ensure system clock is synced (`timedatectl status`)
+
+---
+
+## API Reference
+
+**OpenAPI 3 Specification**: [`docs/openapi.yaml`](openapi.yaml)
+
+**Interactive API Reference (Redoc)**: [`docs/api-reference.html`](api-reference.html)
+
+The API reference documents all HTTP endpoints served by the miner on port 8091:
+- Public endpoints: `/health`, `/stats`, `/metagraph`
+- Authenticated endpoints: `/IngestSynapse`, `/QuerySynapse`, `/ChallengeSynapse`, `/retrieve/{cid}`
+- Namespace & key management: `/namespace`, `/AttestNamespace`, `/attestation/{namespace}`, `/KeyShareSynapse`, `/KeyShareRetrieve`
+- Repair & replication: `/RepairSynapse`, `/list`
+- Merkle proofs: `/commitment`, `/prove-memory`
+
+All mutating endpoints require sr25519 signed requests with `hotkey`, `nonce` (unix ms), and `signature` fields in the JSON body.
