@@ -1,0 +1,21 @@
+{
+  "name": "@engram/client",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for Engram — decentralized AI memory layer on Bittensor",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build"
+  },
+  "keywords": ["engram", "bittensor", "vector-database", "ai-memory", "decentralized"],
+  "license": "MIT",
+  "dependencies": {},
+  "peerDependencies": {
+    "@polkadot/util-crypto": "^12.0.0",
+    "tweetnacl": "^1.0.3",
+    "tweetnacl-util": "^0.15.1"
+  },
+  "engines": { "node": ">=18" }
+}
