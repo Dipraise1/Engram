@@ -7,6 +7,25 @@ This guide covers everything needed to run an Engram miner on testnet (subnet 45
 
 ---
 
+## HTTP API Reference
+
+The miner HTTP API is documented as OpenAPI in [`miner-openapi.json`](miner-openapi.json).
+Open [`miner-api.html`](miner-api.html) to view the rendered Redoc reference.
+
+Regenerate the spec after changing `neurons/miner.py` routes:
+
+```bash
+python scripts/generate_miner_openapi.py
+```
+
+CI can check that the committed spec still matches the aiohttp route table:
+
+```bash
+python scripts/generate_miner_openapi.py --check
+```
+
+---
+
 ## Requirements
 
 | Resource | Minimum | Recommended |
