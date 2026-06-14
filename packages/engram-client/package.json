@@ -1,0 +1,21 @@
+{
+  "name": "@engram/client",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for the Engram decentralized vector database",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@polkadot/util-crypto": "^13"
+  },
+  "devDependencies": {
+    "typescript": "^5.4",
+    "vitest": "^1"
+  },
+  "keywords": ["engram", "vector-database", "bittensor"],
+  "license": "MIT"
+}
