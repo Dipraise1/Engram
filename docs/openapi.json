@@ -1,0 +1,983 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Engram Miner API",
+    "version": "1.0.0",
+    "description": "HTTP API for Engram miners. Used by validators and external clients."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8091",
+      "description": "Miner Node"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "ChallengeSynapse": {
+        "description": "Validator issues a storage proof challenge to a miner.\n\nRequest:  cid + nonce_hex + expires_at\nResponse: embedding_hash + proof (HMAC)\n\nThe Rust engram_core module handles challenge generation and verification.",
+        "properties": {
+          "cid": {
+            "description": "CID the miner is being challenged to prove storage of.",
+            "title": "Cid",
+            "type": "string"
+          },
+          "nonce_hex": {
+            "description": "32-byte random nonce as hex string.",
+            "title": "Nonce Hex",
+            "type": "string"
+          },
+          "expires_at": {
+            "description": "Unix timestamp after which the proof is invalid.",
+            "title": "Expires At",
+            "type": "integer"
+          },
+          "embedding_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "SHA-256 of the stored embedding bytes (hex).",
+            "title": "Embedding Hash"
+          },
+          "proof": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "HMAC-SHA256(nonce || embedding_hash) proving possession.",
+            "title": "Proof"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error"
+          }
+        },
+        "required": [
+          "cid",
+          "nonce_hex",
+          "expires_at"
+        ],
+        "title": "ChallengeSynapse",
+        "type": "object"
+      },
+      "IngestSynapse": {
+        "description": "Sent by client/validator to a miner to store an embedding.\n\nRequest:  text OR raw_embedding (one must be provided)\nResponse: cid (set by miner on success)\n\nPrivate collections \u2014 two auth modes (prefer sig-based):\n  Sig-based  (secure):  namespace + namespace_hotkey + namespace_sig + namespace_timestamp_ms\n  Key-based  (legacy):  namespace + namespace_key",
+        "properties": {
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Raw text to embed and store. Mutually exclusive with raw_embedding.",
+            "title": "Text"
+          },
+          "raw_embedding": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Pre-computed embedding vector. Skips the embedding step on the miner.",
+            "title": "Raw Embedding"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "description": "Arbitrary key-value metadata stored alongside the vector.",
+            "title": "Metadata",
+            "type": "object"
+          },
+          "model_version": {
+            "default": "v1",
+            "description": "Subnet model epoch version for CID generation.",
+            "title": "Model Version",
+            "type": "string"
+          },
+          "namespace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Private collection name.",
+            "title": "Namespace"
+          },
+          "namespace_hotkey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Bittensor SS58 hotkey that owns this namespace.",
+            "title": "Namespace Hotkey"
+          },
+          "namespace_sig": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "sr25519 hex signature over 'engram-ns:{namespace}:{namespace_timestamp_ms}'. Replaces namespace_key \u2014 key never travels over the wire.",
+            "title": "Namespace Sig"
+          },
+          "namespace_timestamp_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Unix ms timestamp for namespace_sig replay prevention (\u00b160s window).",
+            "title": "Namespace Timestamp Ms"
+          },
+          "namespace_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "[Deprecated] Secret key for the namespace. Use namespace_sig instead.",
+            "title": "Namespace Key"
+          },
+          "cid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Content identifier returned by the miner.",
+            "title": "Cid"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Error message if ingest failed.",
+            "title": "Error"
+          }
+        },
+        "title": "IngestSynapse",
+        "type": "object"
+      },
+      "KeyShareRetrieve": {
+        "description": "Client retrieves its key share from a miner.\n\nThe miner returns the share only after verifying namespace ownership.\nThe client collects K shares from K different miners and reconstructs locally.\n\nAuth: namespace_hotkey + namespace_sig + namespace_timestamp_ms.",
+        "properties": {
+          "namespace": {
+            "description": "Namespace to retrieve the share for.",
+            "title": "Namespace",
+            "type": "string"
+          },
+          "namespace_hotkey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Namespace Hotkey"
+          },
+          "namespace_sig": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Namespace Sig"
+          },
+          "namespace_timestamp_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Namespace Timestamp Ms"
+          },
+          "share_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Share Index"
+          },
+          "share_hex": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Share Hex"
+          },
+          "threshold": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Threshold"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Total"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error"
+          }
+        },
+        "required": [
+          "namespace"
+        ],
+        "title": "KeyShareRetrieve",
+        "type": "object"
+      },
+      "KeyShareSynapse": {
+        "description": "Client deposits one Shamir key share with a miner for threshold decryption.\n\nThe miner stores the share associated with the namespace. It cannot reconstruct\nthe full key alone \u2014 that requires K miners to cooperate at retrieval time.\n\nAuth: namespace_hotkey + namespace_sig + namespace_timestamp_ms (sig-based only).",
+        "properties": {
+          "namespace": {
+            "description": "Namespace this share belongs to.",
+            "title": "Namespace",
+            "type": "string"
+          },
+          "share_index": {
+            "description": "1-based share index (1..total).",
+            "title": "Share Index",
+            "type": "integer"
+          },
+          "share_hex": {
+            "description": "Hex-encoded share bytes.",
+            "title": "Share Hex",
+            "type": "string"
+          },
+          "threshold": {
+            "description": "Minimum shares needed to reconstruct (k).",
+            "title": "Threshold",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Total shares created (n).",
+            "title": "Total",
+            "type": "integer"
+          },
+          "namespace_hotkey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Namespace Hotkey"
+          },
+          "namespace_sig": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Namespace Sig"
+          },
+          "namespace_timestamp_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Namespace Timestamp Ms"
+          },
+          "stored": {
+            "default": false,
+            "title": "Stored",
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error"
+          }
+        },
+        "required": [
+          "namespace",
+          "share_index",
+          "share_hex",
+          "threshold",
+          "total"
+        ],
+        "title": "KeyShareSynapse",
+        "type": "object"
+      },
+      "QuerySynapse": {
+        "description": "Sent by validator/client to miners for approximate nearest-neighbor search.\n\nRequest:  query_text OR query_vector, top_k\nResponse: results (list of CID + score + metadata)",
+        "properties": {
+          "query_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Query Text"
+          },
+          "query_vector": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Query Vector"
+          },
+          "top_k": {
+            "default": 10,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Top K",
+            "type": "integer"
+          },
+          "namespace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Namespace"
+          },
+          "namespace_hotkey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Namespace Hotkey"
+          },
+          "namespace_sig": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Namespace Sig"
+          },
+          "namespace_timestamp_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Namespace Timestamp Ms"
+          },
+          "namespace_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Namespace Key"
+          },
+          "results": {
+            "description": "List of {cid, score, metadata} dicts ordered by descending similarity.",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Miner-reported query latency in milliseconds.",
+            "title": "Latency Ms"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error"
+          }
+        },
+        "title": "QuerySynapse",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "sr25519_signature": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "namespace_sig",
+        "description": "Requires `namespace_hotkey`, `namespace_sig`, and `namespace_timestamp_ms` in the request payload instead of standard headers for most synapse endpoints."
+      }
+    }
+  },
+  "paths": {
+    "/IngestSynapse": {
+      "post": {
+        "summary": "Ingest",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestSynapse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestSynapse"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/QuerySynapse": {
+      "post": {
+        "summary": "Query",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuerySynapse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuerySynapse"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ChallengeSynapse": {
+      "post": {
+        "summary": "Challenge",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeSynapse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChallengeSynapse"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/namespace": {
+      "post": {
+        "summary": "Namespace management \u2014 create, delete, rotate key. Localhost only.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AttestNamespace": {
+      "post": {
+        "summary": "Attest a namespace to a Bittensor hotkey.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/attestation/{namespace}": {
+      "get": {
+        "summary": "GET /attestation/{namespace} \u2014 return trust info for a namespace.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/chat-history/{user_id}": {
+      "get": {
+        "summary": "GET /chat-history/{user_id}?conv_id=X \u2014 load a user's chat history.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/chat-history": {
+      "post": {
+        "summary": "POST /chat-history \u2014 save a user's chat history.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversations/{user_id}": {
+      "get": {
+        "summary": "GET /conversations/{user_id} \u2014 list all conversations for a user.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/conversations": {
+      "post": {
+        "summary": "POST /conversations \u2014 create a new conversation.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversations/{conv_id}": {
+      "patch": {
+        "summary": "PATCH /conversations/{conv_id} \u2014 rename a conversation.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "DELETE /conversations/{conv_id}?user_id=X \u2014 delete a conversation.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/retrieve/{cid}": {
+      "get": {
+        "summary": "GET /retrieve/{cid} \u2014 return stored metadata for a CID.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      },
+      "delete": {
+        "summary": "DELETE /retrieve/{cid} \u2014 permanently remove a stored memory.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/RepairSynapse": {
+      "post": {
+        "summary": "POST /RepairSynapse \u2014 return full embedding for a CID so the validator",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/KeyShareSynapse": {
+      "post": {
+        "summary": "POST /KeyShareSynapse \u2014 store a Shamir key share for a namespace.",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeyShareSynapse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeyShareSynapse"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/KeyShareRetrieve": {
+      "post": {
+        "summary": "POST /KeyShareRetrieve \u2014 return this miner's share for a namespace.",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeyShareRetrieve"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeyShareRetrieve"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/list": {
+      "post": {
+        "summary": "POST /list \u2014 paginate and filter stored memories.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/stats": {
+      "get": {
+        "summary": "Public stats endpoint \u2014 rich counters for the dashboard.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/metagraph": {
+      "get": {
+        "summary": "Public metagraph snapshot \u2014 returns all registered neurons for the leaderboard.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "summary": "Prometheus metrics \u2014 localhost only to avoid leaking operational data.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/wallet-stats": {
+      "get": {
+        "summary": "Wallet Stats",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/wallet-stats/{hotkey}": {
+      "get": {
+        "summary": "Wallet Stats",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/commitment": {
+      "get": {
+        "summary": "GET /commitment \u2014 returns the Merkle root of this miner's full memory corpus.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/prove-memory": {
+      "post": {
+        "summary": "POST /prove-memory \u2014 return a Merkle inclusion proof for one CID.",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
