@@ -76,6 +76,26 @@ jobs:
       - name: Run Rust tests
         run: cargo test --manifest-path engram-core/Cargo.toml --no-default-features
 
+  # ── OpenAPI spec validation ───────────────────────────────────────────────────
+  openapi-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install spectral
+        run: npm install -g @stoplight/spectral-cli
+
+      - name: Validate OpenAPI spec
+        run: |
+          spectral lint docs/openapi.yaml --ruleset spectral:oas
+          echo "OpenAPI spec valid"
+
   # ── Build wheel smoke-test ────────────────────────────────────────────────────
   build-wheel:
     runs-on: ubuntu-latest

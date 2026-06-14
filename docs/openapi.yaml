@@ -1,0 +1,798 @@
+openapi: 3.0.3
+info:
+  title: Engram Miner HTTP API
+  version: 0.1.2
+  description: |
+    HTTP API served by Engram miners (aiohttp) on port 8091.
+    Used by validators for direct HTTP calls and by third-party clients.
+    All mutating endpoints require sr25519 signed requests (hotkey, nonce, signature).
+servers:
+  - url: 'http://{miner_host}:8091'
+    variables:
+      miner_host:
+        default: 'localhost'
+        description: Public IP or hostname of the miner
+paths:
+  /health:
+    get:
+      summary: Liveness probe
+      description: Minimal health check — returns 200 OK if the HTTP server is running.
+      responses:
+        '200':
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+              example:
+                status: ok
+
+  /stats:
+    get:
+      summary: Public miner statistics
+      description: Rich operational counters for dashboards and monitoring.
+      responses:
+        '200':
+          description: Miner stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+                  vectors:
+                    type: integer
+                    description: Total vectors stored
+                  peers:
+                    type: integer
+                    description: Connected DHT peers
+                  uid:
+                    type: integer
+                    description: Miner UID on subnet
+                  queries_today:
+                    type: integer
+                  p50_latency_ms:
+                    type: number
+                    nullable: true
+                  proof_rate:
+                    type: number
+                    nullable: true
+                  uptime_pct:
+                    type: number
+                  block:
+                    type: integer
+                    nullable: true
+                  avg_score:
+                    type: number
+                    nullable: true
+                  hotkey:
+                    type: string
+              example:
+                status: ok
+                vectors: 1025
+                peers: 7
+                uid: 2
+                queries_today: 5
+                p50_latency_ms: 2.5
+                proof_rate: 0.93
+                uptime_pct: 99.9
+                block: 6986852
+                avg_score: 1.0
+                hotkey: "5F..."
+
+  /metagraph:
+    get:
+      summary: Public metagraph snapshot
+      description: Returns all registered neurons for the leaderboard.
+      responses:
+        '200':
+          description: Metagraph data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  neurons:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        uid:
+                          type: integer
+                        hotkey:
+                          type: string
+                          nullable: true
+                        ip:
+                          type: string
+                          nullable: true
+                        port:
+                          type: integer
+                          nullable: true
+                        incentive:
+                          type: number
+                  block:
+                    type: integer
+                    nullable: true
+              example:
+                neurons:
+                  - uid: 2
+                    hotkey: "5F..."
+                    ip: "72.62.2.34"
+                    port: 8091
+                    incentive: 0.123456
+                block: 6986852
+
+components:
+  securitySchemes:
+    HotkeySignature:
+      type: http
+      scheme: bearer
+      bearerFormat: "sr25519"
+      description: |
+        Requests must include `hotkey`, `nonce` (unix ms), and `signature` (hex sr25519)
+        in the JSON body. The signature covers: `{nonce}:{endpoint}:{body_hash}`.
+  schemas:
+    AuthPayload:
+      type: object
+      required:
+        - hotkey
+        - nonce
+        - signature
+      properties:
+        hotkey:
+          type: string
+          description: SS58 address of the signing keypair
+        nonce:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds (replay protection ±30s)
+        signature:
+          type: string
+          pattern: '^0x[0-9a-fA-F]+$'
+          description: Hex-encoded sr25519 signature
+
+    IngestRequest:
+      allOf:
+        - $ref: '#/components/schemas/AuthPayload'
+        - type: object
+          properties:
+            text:
+              type: string
+              description: Raw text to embed (alternative to raw_embedding)
+            raw_embedding:
+              type: array
+              items:
+                type: number
+              description: Pre-computed float32 embedding vector
+            metadata:
+              type: object
+              additionalProperties:
+                type: string
+            model_version:
+              type: string
+              default: "v1"
+            namespace:
+              type: string
+            namespace_hotkey:
+              type: string
+            namespace_sig:
+              type: string
+            namespace_timestamp_ms:
+              type: integer
+            namespace_key:
+              type: string
+
+    IngestResponse:
+      type: object
+      properties:
+        cid:
+          type: string
+          description: Content identifier (v1::...)
+        error:
+          type: string
+          nullable: true
+
+    QueryRequest:
+      allOf:
+        - $ref: '#/components/schemas/AuthPayload'
+        - type: object
+          properties:
+            query_text:
+              type: string
+            query_vector:
+              type: array
+              items:
+                type: number
+            top_k:
+              type: integer
+              default: 10
+            namespace:
+              type: string
+            namespace_hotkey:
+              type: string
+            namespace_sig:
+              type: string
+            namespace_timestamp_ms:
+              type: integer
+            namespace_key:
+              type: string
+
+    QueryResult:
+      type: object
+      properties:
+        cid:
+          type: string
+        score:
+          type: number
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+
+    QueryResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/QueryResult'
+        latency_ms:
+          type: number
+        error:
+          type: string
+          nullable: true
+
+    ChallengeRequest:
+      allOf:
+        - $ref: '#/components/schemas/AuthPayload'
+        - type: object
+          required:
+            - cid
+            - nonce_hex
+            - expires_at
+          properties:
+            cid:
+              type: string
+            nonce_hex:
+              type: string
+            expires_at:
+              type: integer
+            validator_hotkey_hex:
+              type: string
+
+    ChallengeResponse:
+      type: object
+      properties:
+        embedding_hash:
+          type: string
+        proof:
+          type: string
+
+    RetrieveResponse:
+      type: object
+      properties:
+        cid:
+          type: string
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+
+  /IngestSynapse:
+    post:
+      summary: Store an embedding (text or vector) and return CID
+      description: |
+        Ingests text (auto-embedded) or a pre-computed embedding.
+        Requires valid sr25519 signature. Returns a CID on success.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IngestRequest'
+      responses:
+        '200':
+          description: Ingest result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestResponse'
+              example:
+                cid: "v1::a1b2c3d4..."
+                error: null
+        '401':
+          description: Invalid or missing signature
+        '429':
+          description: Rate limited
+        '500':
+          description: Internal error
+
+  /QuerySynapse:
+    post:
+      summary: ANN search — return top-K similar vectors
+      description: |
+        Performs approximate nearest neighbor search.
+        Accepts either query_text (auto-embedded) or query_vector.
+        Requires valid sr25519 signature.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryRequest'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+              example:
+                results:
+                  - cid: "v1::a1b2c3d4..."
+                    score: 0.987
+                    metadata: {}
+                latency_ms: 2.3
+                error: null
+        '401':
+          description: Invalid or missing signature
+        '429':
+          description: Rate limited
+        '500':
+          description: Internal error
+
+  /ChallengeSynapse:
+    post:
+      summary: Storage proof challenge (validator → miner)
+      description: |
+        Validator challenges miner to prove it stores a specific CID.
+        Miner returns HMAC-based proof binding embedding_hash + nonce + validator hotkey.
+        Requires valid sr25519 signature.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChallengeRequest'
+      responses:
+        '200':
+          description: Storage proof
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChallengeResponse'
+              example:
+                embedding_hash: "e3b0c442..."
+                proof: "a1b2c3d4..."
+        '400':
+          description: Challenge expired or CID not found
+        '401':
+          description: Invalid or missing signature
+        '404':
+          description: CID not stored on this miner
+        '500':
+          description: Internal error
+
+  /retrieve/{cid}:
+    get:
+      summary: Retrieve metadata for a CID (public namespaces only)
+      description: |
+        Returns stored metadata for a CID.
+        Private namespace memories return 404 — use authenticated /QuerySynapse instead.
+      parameters:
+        - name: cid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Metadata for CID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetrieveResponse'
+        '404':
+          description: Not found or private namespace
+
+  /namespace:
+    post:
+      summary: Namespace management (create, delete, rotate, list)
+      description: |
+        Localhost-only endpoint for managing encrypted namespaces.
+        Actions: create, delete, rotate, list.
+        Restricted to loopback interface for security.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+                - namespace
+              properties:
+                action:
+                  type: string
+                  enum: [create, delete, rotate, list]
+                namespace:
+                  type: string
+                key:
+                  type: string
+                new_key:
+                  type: string
+      responses:
+        '200':
+          description: Namespace operation result
+        '403':
+          description: Forbidden (not localhost)
+        '400':
+          description: Invalid action or missing fields
+        '500':
+          description: Internal error
+
+  /AttestNamespace:
+    post:
+      summary: Attest a namespace to a Bittensor hotkey
+      description: |
+        Binds a namespace to a hotkey with sr25519 signature.
+        On-chain stake of the hotkey determines trust tier.
+        Anyone can call, but only the hotkey owner can produce valid signature.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - namespace
+                - owner_hotkey
+                - signature
+                - timestamp_ms
+              properties:
+                namespace:
+                  type: string
+                owner_hotkey:
+                  type: string
+                signature:
+                  type: string
+                  pattern: '^0x[0-9a-fA-F]+$'
+                timestamp_ms:
+                  type: integer
+      responses:
+        '200':
+          description: Attestation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  namespace:
+                    type: string
+                  trust_tier:
+                    type: string
+                    enum: [anonymous, bronze, silver, gold, platinum]
+                  stake_tao:
+                    type: number
+        '400':
+          description: Missing required fields
+        '500':
+          description: Internal error
+
+  /attestation/{namespace}:
+    get:
+      summary: Get trust info for a namespace
+      description: Returns attestation status, trust tier, and stake for a namespace.
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Namespace attestation info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  namespace:
+                    type: string
+                  owner_hotkey:
+                    type: string
+                    nullable: true
+                  trust_tier:
+                    type: string
+                    enum: [anonymous, bronze, silver, gold, platinum]
+                  stake_tao:
+                    type: number
+                  attested_at:
+                    type: integer
+                    nullable: true
+                  attested:
+                    type: boolean
+
+  /RepairSynapse:
+    post:
+      summary: Return full embedding for a CID (validator repair)
+      description: |
+        Returns the full embedding so validators can copy it to under-replicated miners.
+        Requires network auth (validator hotkey).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/AuthPayload'
+                - type: object
+                  required:
+                    - cid
+                  properties:
+                    cid:
+                      type: string
+      responses:
+        '200':
+          description: Full embedding data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cid:
+                    type: string
+                  embedding:
+                    type: array
+                    items:
+                      type: number
+                  metadata:
+                    type: object
+        '400':
+          description: Invalid JSON or missing CID
+        '401':
+          description: Invalid or missing signature
+        '404':
+          description: CID not found or private namespace
+        '500':
+          description: Internal error
+
+  /KeyShareSynapse:
+    post:
+      summary: Store a Shamir key share for a namespace
+      description: |
+        Stores one key share per namespace for threshold encryption.
+        Caller must prove namespace ownership via sr25519 signature.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/AuthPayload'
+                - type: object
+                  required:
+                    - namespace
+                    - namespace_hotkey
+                    - namespace_sig
+                    - namespace_timestamp_ms
+                    - share_index
+                    - share_hex
+                    - threshold
+                    - total
+                  properties:
+                    namespace:
+                      type: string
+                    namespace_hotkey:
+                      type: string
+                    namespace_sig:
+                      type: string
+                    namespace_timestamp_ms:
+                      type: integer
+                    share_index:
+                      type: integer
+                    share_hex:
+                      type: string
+                    threshold:
+                      type: integer
+                    total:
+                      type: integer
+      responses:
+        '200':
+          description: Key share stored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stored:
+                    type: boolean
+        '400':
+          description: Missing required fields
+        '401':
+          description: Invalid signature
+        '403':
+          description: Not namespace owner
+        '500':
+          description: Internal error
+
+  /KeyShareRetrieve:
+    post:
+      summary: Retrieve this miner's key share for a namespace
+      description: |
+        Returns the single share stored here; client must collect K shares to reconstruct.
+        Caller must prove namespace ownership.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/AuthPayload'
+                - type: object
+                  required:
+                    - namespace
+                    - namespace_hotkey
+                    - namespace_sig
+                    - namespace_timestamp_ms
+                  properties:
+                    namespace:
+                      type: string
+                    namespace_hotkey:
+                      type: string
+                    namespace_sig:
+                      type: string
+                    namespace_timestamp_ms:
+                      type: integer
+      responses:
+        '200':
+          description: Key share data
+        '401':
+          description: Invalid signature
+        '403':
+          description: Not namespace owner
+        '404':
+          description: No key share stored
+        '500':
+          description: Internal error
+
+  /list:
+    post:
+      summary: Paginate and filter stored memories
+      description: |
+        Lists CIDs with optional metadata filtering and namespace scoping.
+        Private namespaces require ownership proof.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filter:
+                  type: object
+                  additionalProperties:
+                    type: string
+                limit:
+                  type: integer
+                  default: 50
+                  maximum: 200
+                offset:
+                  type: integer
+                  default: 0
+                namespace:
+                  type: string
+                  default: "__public__"
+                namespace_hotkey:
+                  type: string
+                namespace_sig:
+                  type: string
+                namespace_timestamp_ms:
+                  type: integer
+      responses:
+        '200':
+          description: List of records
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  records:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        cid:
+                          type: string
+                        embedding:
+                          type: array
+                          items:
+                            type: number
+                        metadata:
+                          type: object
+                        namespace:
+                          type: string
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
+        '403':
+          description: Namespace ownership proof required
+        '500':
+          description: Internal error
+
+  /commitment:
+    get:
+      summary: Get Merkle root of full memory corpus
+      description: |
+        Returns the Merkle root commitment for this miner's stored memories.
+        AI agents and validators can verify specific memories are stored without downloading the full index.
+      responses:
+        '200':
+          description: Merkle commitment
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  root_hex:
+                    type: string
+                    pattern: '^[0-9a-fA-F]{64}$'
+                  count:
+                    type: integer
+                  built_at:
+                    type: number
+                  hotkey:
+                    type: string
+
+  /prove-memory:
+    post:
+      summary: Get Merkle inclusion proof for a specific CID
+      description: |
+        Returns a Merkle inclusion proof for one CID + embedding_hash pair.
+        Can be verified offline with engram_core.verify_inclusion().
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - cid
+                - embedding_hash
+              properties:
+                cid:
+                  type: string
+                embedding_hash:
+                  type: string
+                  pattern: '^[0-9a-fA-F]{64}$'
+      responses:
+        '200':
+          description: Inclusion proof
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  root_hex:
+                    type: string
+                  cid:
+                    type: string
+                  proof:
+                    type: object
+        '400':
+          description: Missing cid or embedding_hash
+        '404':
+          description: Memory not found
+        '500':
+          description: Internal error
