@@ -1,0 +1,516 @@
+openapi: "3.0.3"
+info:
+  title: Engram Miner HTTP API
+  version: "1.0.0"
+  description: |
+    HTTP API for Engram miners on Bittensor subnet 450.
+    Endpoints registered in `neurons/miner.py`.
+
+    ## Authentication
+
+    Most write endpoints support two authentication modes for private namespaces:
+
+    1. **Signature-based** (preferred): `namespace`, `namespace_hotkey`, `namespace_sig`,
+       and `namespace_timestamp_ms` headers — the hotkey signs the request payload
+       with sr25519.
+
+    2. **Key-based** (legacy): `namespace` and `namespace_key` headers — a shared
+       symmetric key derived from PBKDF2.
+
+servers:
+  - url: http://localhost:8091
+    description: Local miner
+
+paths:
+  /IngestSynapse:
+    post:
+      summary: Store an embedding
+      description: Embed and store text, or store a pre-computed embedding vector.
+      operationId: ingest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text: { type: string, description: "Text to embed" }
+                raw_embedding: { type: array, items: { type: number, format: float }, description: "Pre-computed embedding vector" }
+                namespace: { type: string }
+                namespace_key: { type: string }
+                namespace_hotkey: { type: string }
+                namespace_sig: { type: string, description: "sr25519 signature" }
+                namespace_timestamp_ms: { type: integer }
+              oneOf:
+                - required: [text]
+                - required: [raw_embedding]
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cid: { type: string, description: "Content identifier of stored embedding" }
+        "503":
+          description: Miner is offline or storage failed
+
+  /QuerySynapse:
+    post:
+      summary: Search memory
+      description: Semantic search over stored embeddings.
+      operationId: query
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text: { type: string }
+                embedding: { type: array, items: { type: number, format: float } }
+                top_k: { type: integer, default: 10 }
+                filter: { type: object, description: "Metadata filter" }
+                namespace: { type: string }
+                namespace_key: { type: string }
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        cid: { type: string }
+                        score: { type: number, format: float }
+                        metadata: { type: object }
+                        text: { type: string }
+
+  /ChallengeSynapse:
+    post:
+      summary: Storage proof challenge
+      description: Validator-submitted challenge to verify a miner stores a specific CID.
+      operationId: challenge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cid: { type: string }
+                nonce: { type: string }
+                validator_hotkey: { type: string }
+      responses:
+        "200":
+          description: Proof response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hmac_proof: { type: string }
+                  embedding_hash: { type: string }
+
+  /namespace:
+    post:
+      summary: Namespace operations
+      description: Create or manage a private namespace.
+      operationId: namespace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {}
+      responses:
+        "200":
+          description: Namespace operation result
+
+  /AttestNamespace:
+    post:
+      summary: Attest namespace
+      description: Submit a namespace attestation from a validator.
+      operationId: attestNamespace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {}
+      responses:
+        "200":
+          description: Attestation result
+
+  /attestation/{namespace}:
+    get:
+      summary: Get attestation
+      description: Retrieve attestation for a namespace.
+      operationId: getAttestation
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Attestation data
+
+  /chat-history/{user_id}:
+    get:
+      summary: Get chat history
+      operationId: getChatHistory
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Chat history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages: { type: array, items: { type: object } }
+
+  /chat-history:
+    post:
+      summary: Save chat message
+      operationId: saveChatMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id: { type: string }
+                messages: { type: array, items: { type: object } }
+              required: [user_id, messages]
+      responses:
+        "200":
+          description: Message saved
+
+  /conversations/{user_id}:
+    get:
+      summary: List conversations
+      operationId: listConversations
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Conversation list
+
+  /conversations:
+    post:
+      summary: Create conversation
+      operationId: createConversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id: { type: string }
+                title: { type: string, default: "New Chat" }
+              required: [user_id]
+      responses:
+        "200":
+          description: Conversation created
+
+  /conversations/{conv_id}:
+    patch:
+      summary: Rename conversation
+      operationId: renameConversation
+      parameters:
+        - name: conv_id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id: { type: string }
+                title: { type: string }
+              required: [user_id, title]
+      responses:
+        "200":
+          description: Conversation renamed
+    delete:
+      summary: Delete conversation
+      operationId: deleteConversation
+      parameters:
+        - name: conv_id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id: { type: string }
+              required: [user_id]
+      responses:
+        "200":
+          description: Conversation deleted
+
+  /retrieve/{cid}:
+    get:
+      summary: Retrieve by CID
+      description: Retrieve a stored embedding and metadata by its content identifier.
+      operationId: retrieve
+      parameters:
+        - name: cid
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Retrieved data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cid: { type: string }
+                  embedding: { type: array, items: { type: number } }
+                  metadata: { type: object }
+                  text: { type: string }
+    delete:
+      summary: Delete by CID
+      operationId: deleteByCid
+      parameters:
+        - name: cid
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Deleted successfully
+
+  /RepairSynapse:
+    post:
+      summary: Repair replication
+      description: Trigger repair for under-replicated CIDs.
+      operationId: repairReplication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {}
+      responses:
+        "200":
+          description: Repair result
+
+  /KeyShareSynapse:
+    post:
+      summary: Store key share
+      description: Store a Shamir key share on a miner for threshold decryption.
+      operationId: storeKeyShare
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                namespace: { type: string }
+                share_index: { type: integer }
+                share_value: { type: string }
+              required: [namespace, share_index, share_value]
+      responses:
+        "200":
+          description: Key share stored
+
+  /KeyShareRetrieve:
+    post:
+      summary: Retrieve key share
+      description: Retrieve a stored Shamir key share.
+      operationId: retrieveKeyShare
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                namespace: { type: string }
+                share_index: { type: integer }
+              required: [namespace, share_index]
+      responses:
+        "200":
+          description: Key share retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  share_value: { type: string }
+
+  /list:
+    post:
+      summary: List records
+      description: List stored records with optional filter and pagination.
+      operationId: listRecords
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filter: { type: object }
+                limit: { type: integer, default: 100 }
+                offset: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: Record list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results: { type: array, items: { type: object } }
+                  total: { type: integer }
+
+  /health:
+    get:
+      summary: Health check
+      description: Basic liveness check.
+      operationId: health
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: "ok" }
+                  uid: { type: integer }
+
+  /stats:
+    get:
+      summary: Statistics
+      description: Miner statistics including vector count and peer count.
+      operationId: stats
+      responses:
+        "200":
+          description: Statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vectors: { type: integer }
+                  peers: { type: integer }
+                  uid: { type: integer }
+
+  /metagraph:
+    get:
+      summary: Metagraph info
+      description: Current Bittensor metagraph state.
+      operationId: metagraph
+      responses:
+        "200":
+          description: Metagraph data
+
+  /metrics:
+    get:
+      summary: Prometheus metrics
+      description: Prometheus-formatted metrics endpoint.
+      operationId: metrics
+      responses:
+        "200":
+          description: Prometheus metrics (text/plain)
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /wallet-stats:
+    get:
+      summary: Wallet statistics (all)
+      description: Wallet stats aggregated.
+      operationId: walletStatsAll
+      responses:
+        "200":
+          description: Wallet statistics
+
+  /wallet-stats/{hotkey}:
+    get:
+      summary: Wallet statistics (by hotkey)
+      description: Wallet stats for a specific hotkey.
+      operationId: walletStatsByHotkey
+      parameters:
+        - name: hotkey
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Wallet stats for hotkey
+
+  /commitment:
+    get:
+      summary: Merkle commitment
+      description: Get the current Merkle commitment over all stored CIDs.
+      operationId: commitment
+      responses:
+        "200":
+          description: Merkle root and proof
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  merkle_root: { type: string }
+                  cid_count: { type: integer }
+
+  /prove-memory:
+    post:
+      summary: Memory proof
+      description: Generate a Merkle proof for a specific memory.
+      operationId: proveMemory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cid: { type: string }
+              required: [cid]
+      responses:
+        "200":
+          description: Merkle proof
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  proof: { type: array, items: { type: string } }
+                  root: { type: string }
