@@ -1,0 +1,11 @@
+name: OpenAPI Spec Check
+on: [pull_request, push]
+jobs:
+  openapi-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate OpenAPI spec
+        uses: dorny/openapi-validation@v1
+        with:
+          spec: docs/openapi.yaml
