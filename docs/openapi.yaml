@@ -1,0 +1,266 @@
+openapi: "3.0.3"
+info:
+  title: Engram Miner HTTP API
+  description: "Miner HTTP endpoints for the Engram subnet. Authentication uses sr25519 signed-challenge headers."
+  version: "1.0.0"
+servers:
+  - url: https://{subdomain}.theengram.space
+    variables:
+      subdomain:
+        default: miner
+        description: Miner subdomain
+
+components:
+  securitySchemes:
+    Sr25519Auth:
+      type: apiKey
+      in: header
+      name: X-Signature
+      description: "sr25519 signed challenge. Client signs a challenge nonce with their sr25519 keypair. Header format: `X-Signature: <nonce>:<signature_hex>`"
+
+  schemas:
+    IngestRequest:
+      type: object
+      properties:
+        content:
+          type: string
+          description: Content to ingest
+        cid:
+          type: string
+          description: Content identifier
+    QueryRequest:
+      type: object
+      properties:
+        query:
+          type: string
+        top_k:
+          type: integer
+          default: 10
+    Namespace:
+      type: object
+      properties:
+        name:
+          type: string
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+
+security:
+  - Sr25519Auth: []
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: health
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /stats:
+    get:
+      summary: Miner stats
+      operationId: getStats
+      responses:
+        "200":
+          description: Stats data
+  /metagraph:
+    get:
+      summary: Get metagraph info
+      operationId: getMetagraph
+      responses:
+        "200":
+          description: Metagraph data
+  /metrics:
+    get:
+      summary: Prometheus metrics
+      operationId: getMetrics
+      responses:
+        "200":
+          description: Metrics in Prometheus format
+  /IngestSynapse:
+    post:
+      summary: Ingest content
+      operationId: ingestContent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IngestRequest"
+      responses:
+        "200":
+          description: Content ingested
+  /QuerySynapse:
+    post:
+      summary: Query content
+      operationId: queryContent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QueryRequest"
+      responses:
+        "200":
+          description: Query results
+  /ChallengeSynapse:
+    post:
+      summary: Handle auth challenge
+      operationId: handleChallenge
+      responses:
+        "200":
+          description: Challenge response
+  /namespace:
+    post:
+      summary: Create namespace
+      operationId: createNamespace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Namespace"
+      responses:
+        "200":
+          description: Namespace created
+  /AttestNamespace:
+    post:
+      summary: Attest namespace
+      operationId: attestNamespace
+      responses:
+        "200":
+          description: Namespace attested
+  /attestation/{namespace}:
+    get:
+      summary: Get attestation
+      operationId: getAttestation
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Attestation data
+  /KeyShareSynapse:
+    post:
+      summary: Store key share
+      operationId: storeKeyShare
+      responses:
+        "200":
+          description: Key share stored
+  /KeyShareRetrieve:
+    post:
+      summary: Retrieve key share
+      operationId: retrieveKeyShare
+      responses:
+        "200":
+          description: Key share retrieved
+  /retrieve/{cid}:
+    get:
+      summary: Retrieve content by CID
+      operationId: retrieveContent
+      parameters:
+        - name: cid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Content data
+    delete:
+      summary: Delete content by CID
+      operationId: deleteContent
+      parameters:
+        - name: cid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Content deleted
+  /RepairSynapse:
+    post:
+      summary: Repair retrieval
+      operationId: repairRetrieval
+      responses:
+        "200":
+          description: Repair initiated
+  /chat-history/{user_id}:
+    get:
+      summary: Get chat history
+      operationId: getChatHistory
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Chat history
+    post:
+      summary: Save chat message
+      operationId: saveChatMessage
+      responses:
+        "200":
+          description: Message saved
+  /conversations/{user_id}:
+    get:
+      summary: Get conversations
+      operationId: getConversations
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Conversations list
+  /conversations:
+    post:
+      summary: Create conversation
+      operationId: createConversation
+      responses:
+        "201":
+          description: Conversation created
+  /conversations/{conv_id}:
+    patch:
+      summary: Update conversation
+      operationId: updateConversation
+      parameters:
+        - name: conv_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Conversation updated
+    delete:
+      summary: Delete conversation
+      operationId: deleteConversation
+      parameters:
+        - name: conv_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Conversation deleted
+  /list:
+    post:
+      summary: List available content
+      operationId: listContent
+      responses:
+        "200":
+          description: Content list
