@@ -35,6 +35,9 @@ jobs:
       - name: Install Python dependencies
         run: pip install ".[dev]" faiss-cpu
 
+      - name: Check generated OpenAPI docs
+        run: python scripts/generate_miner_openapi.py --check
+
       - name: Run tests
         run: python -m pytest tests/ -q --tb=short --cov=engram --cov-report=term-missing
 

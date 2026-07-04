@@ -43,6 +43,7 @@ const NAV = [
     group: "Protocol",
     items: [
       { href: "/docs/protocol", label: "Protocol Reference" },
+      { href: "/docs/openapi", label: "Miner OpenAPI" },
       { href: "/docs/architecture", label: "Architecture" },
     ],
   },
@@ -60,6 +61,7 @@ const SEARCH_INDEX = [
   { title: "Run a Miner", href: "/docs/miner", desc: "Wallet, registration, config, start" },
   { title: "Run a Validator", href: "/docs/validator", desc: "Scoring loop, weight setting" },
   { title: "Protocol", href: "/docs/protocol", desc: "IngestSynapse, QuerySynapse, CID spec" },
+  { title: "Miner OpenAPI", href: "/docs/openapi", desc: "Generated OpenAPI 3 spec for miner routes" },
   { title: "Architecture", href: "/docs/architecture", desc: "System design and data flows" },
 ];
 

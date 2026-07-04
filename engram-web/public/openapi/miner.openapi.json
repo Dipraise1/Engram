@@ -1,0 +1,696 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Engram Miner HTTP API",
+    "version": "0.1.0",
+    "description": "Auto-generated from `neurons/miner.py`. Includes route coverage, auth notes, and namespace proof bodies."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8091",
+      "description": "Local miner"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Miner",
+      "description": "Engram miner endpoints"
+    }
+  ],
+  "paths": {
+    "/IngestSynapse": {
+      "post": {
+        "operationId": "handle_ingest",
+        "summary": "Ingest content",
+        "description": "Embed and store a memory in the miner.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "signed-request",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignedMinerRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/QuerySynapse": {
+      "post": {
+        "operationId": "handle_query",
+        "summary": "Query stored memories",
+        "description": "Run semantic search over the miner's vector store.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "signed-request",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignedMinerRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ChallengeSynapse": {
+      "post": {
+        "operationId": "handle_challenge",
+        "summary": "Return a storage proof response",
+        "description": "Return an HMAC-backed proof for a CID challenge.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "signed-request",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignedMinerRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/namespace": {
+      "post": {
+        "operationId": "handle_namespace",
+        "summary": "Manage namespaces locally",
+        "description": "Create, delete, rotate, or list namespaces from localhost only.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "localhost-only",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NamespaceActionRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/AttestNamespace": {
+      "post": {
+        "operationId": "handle_attest",
+        "summary": "Attest namespace ownership",
+        "description": "Link a namespace to a Bittensor hotkey with a signed attestation.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "namespace-proof",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NamespaceAttestationRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/attestation/{namespace}": {
+      "get": {
+        "operationId": "handle_attestation_get",
+        "summary": "Fetch namespace attestation",
+        "description": "Return trust metadata for a namespace.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "public"
+      }
+    },
+    "/chat-history/{user_id}": {
+      "get": {
+        "operationId": "handle_chat_history_get",
+        "summary": "Load chat history",
+        "description": "Fetch a user's saved chat history.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "public"
+      }
+    },
+    "/chat-history": {
+      "post": {
+        "operationId": "handle_chat_history_post",
+        "summary": "Save chat history",
+        "description": "Persist a user's chat history payload.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "public",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatHistoryRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversations/{user_id}": {
+      "get": {
+        "operationId": "handle_conversations_get",
+        "summary": "List conversations",
+        "description": "Return all conversations for a given user.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "public"
+      }
+    },
+    "/conversations": {
+      "post": {
+        "operationId": "handle_conversations_post",
+        "summary": "Create a conversation",
+        "description": "Create a new conversation for a user.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "public",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationCreateRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversations/{conv_id}": {
+      "patch": {
+        "operationId": "handle_conversations_patch",
+        "summary": "Rename a conversation",
+        "description": "Rename an existing conversation.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "public",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationRenameRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "handle_conversations_delete",
+        "summary": "Delete a conversation",
+        "description": "Delete a conversation by id.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "public"
+      }
+    },
+    "/retrieve/{cid}": {
+      "get": {
+        "operationId": "handle_retrieve",
+        "summary": "Retrieve a stored memory",
+        "description": "Fetch a stored memory by CID.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "public"
+      },
+      "delete": {
+        "operationId": "handle_delete",
+        "summary": "Delete a stored memory",
+        "description": "Remove a stored memory; public memories require miner auth and private namespaces also require namespace ownership proof.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "signed-request",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignedMinerRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/RepairSynapse": {
+      "post": {
+        "operationId": "handle_repair_retrieve",
+        "summary": "Return a repair payload",
+        "description": "Return the full embedding for a CID so validators can repair replicas.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "signed-request",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignedMinerRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/KeyShareSynapse": {
+      "post": {
+        "operationId": "handle_key_share_store",
+        "summary": "Store a namespace key share",
+        "description": "Store one Shamir share for a namespace after ownership proof.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "namespace-proof",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NamespaceKeyShareStoreRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/KeyShareRetrieve": {
+      "post": {
+        "operationId": "handle_key_share_retrieve",
+        "summary": "Fetch a namespace key share",
+        "description": "Return the miner's stored share for a namespace after ownership proof.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "namespace-proof",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NamespaceOwnershipRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/list": {
+      "post": {
+        "operationId": "handle_list",
+        "summary": "List stored memories",
+        "description": "Paginate and filter memories, with optional namespace ownership proof for private namespaces.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "public",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListMemoriesRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "handle_health",
+        "summary": "Health check",
+        "description": "Minimal liveness endpoint.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "public"
+      }
+    },
+    "/stats": {
+      "get": {
+        "operationId": "handle_stats",
+        "summary": "Miner stats",
+        "description": "Public dashboard stats for the miner.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "public"
+      }
+    },
+    "/metagraph": {
+      "get": {
+        "operationId": "handle_metagraph",
+        "summary": "Metagraph snapshot",
+        "description": "Return a public neuron snapshot for the leaderboard.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "public"
+      }
+    },
+    "/metrics": {
+      "get": {
+        "operationId": "handle_metrics",
+        "summary": "Prometheus metrics",
+        "description": "Localhost-only Prometheus metrics endpoint.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "localhost-only"
+      }
+    },
+    "/wallet-stats": {
+      "get": {
+        "operationId": "handle_wallet_stats",
+        "summary": "Wallet stats",
+        "description": "Localhost-only wallet activity stats.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "localhost-only"
+      }
+    },
+    "/wallet-stats/{hotkey}": {
+      "get": {
+        "operationId": "handle_wallet_stats",
+        "summary": "Wallet stats",
+        "description": "Localhost-only wallet activity stats.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "localhost-only"
+      }
+    },
+    "/commitment": {
+      "get": {
+        "operationId": "handle_commitment",
+        "summary": "Memory commitment",
+        "description": "Return the Merkle root for the miner's full memory corpus.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "public"
+      }
+    },
+    "/prove-memory": {
+      "post": {
+        "operationId": "handle_prove_memory",
+        "summary": "Merkle inclusion proof",
+        "description": "Return a Merkle inclusion proof for one stored CID.",
+        "tags": [
+          "Miner"
+        ],
+        "x-engram-auth": "public",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProveMemoryRequest"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "SignedMinerRequest": {
+        "type": "object",
+        "description": "sr25519 signed request body used by miner auth. Canonical message: \"{nonce}:{endpoint}:{sha256(payload)}\".",
+        "properties": {
+          "hotkey": {
+            "type": "string",
+            "description": "SS58 address of the signing hotkey"
+          },
+          "nonce": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Unix ms nonce for replay protection"
+          },
+          "signature": {
+            "type": "string",
+            "description": "Hex sr25519 signature over the canonical message"
+          }
+        },
+        "required": [
+          "hotkey",
+          "nonce",
+          "signature"
+        ],
+        "additionalProperties": true
+      },
+      "NamespaceOwnershipRequest": {
+        "type": "object",
+        "description": "Ownership proof for namespace-scoped read/write operations.",
+        "properties": {
+          "namespace": {
+            "type": "string"
+          },
+          "namespace_hotkey": {
+            "type": "string"
+          },
+          "namespace_sig": {
+            "type": "string"
+          },
+          "namespace_timestamp_ms": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "namespace",
+          "namespace_hotkey",
+          "namespace_sig",
+          "namespace_timestamp_ms"
+        ],
+        "additionalProperties": true
+      },
+      "NamespaceAttestationRequest": {
+        "type": "object",
+        "properties": {
+          "namespace": {
+            "type": "string"
+          },
+          "owner_hotkey": {
+            "type": "string"
+          },
+          "signature": {
+            "type": "string"
+          },
+          "timestamp_ms": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "namespace",
+          "owner_hotkey",
+          "signature",
+          "timestamp_ms"
+        ],
+        "additionalProperties": true
+      },
+      "NamespaceActionRequest": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "create",
+              "delete",
+              "rotate",
+              "list"
+            ]
+          },
+          "namespace": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "new_key": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "namespace"
+        ],
+        "additionalProperties": true
+      },
+      "NamespaceKeyShareStoreRequest": {
+        "type": "object",
+        "properties": {
+          "namespace": {
+            "type": "string"
+          },
+          "namespace_hotkey": {
+            "type": "string"
+          },
+          "namespace_sig": {
+            "type": "string"
+          },
+          "namespace_timestamp_ms": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "share_index": {
+            "type": "integer"
+          },
+          "share_hex": {
+            "type": "string"
+          },
+          "threshold": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "namespace",
+          "namespace_hotkey",
+          "namespace_sig",
+          "namespace_timestamp_ms",
+          "share_index",
+          "share_hex",
+          "threshold",
+          "total"
+        ],
+        "additionalProperties": true
+      },
+      "ChatHistoryRequest": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "conv_id": {
+            "type": "string"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "additionalProperties": true
+      },
+      "ConversationCreateRequest": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "conv_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "conv_id"
+        ],
+        "additionalProperties": true
+      },
+      "ConversationRenameRequest": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "title"
+        ],
+        "additionalProperties": true
+      },
+      "ListMemoriesRequest": {
+        "type": "object",
+        "properties": {
+          "filter": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "namespace": {
+            "type": "string"
+          },
+          "namespace_hotkey": {
+            "type": "string"
+          },
+          "namespace_sig": {
+            "type": "string"
+          },
+          "namespace_timestamp_ms": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "additionalProperties": true
+      },
+      "ProveMemoryRequest": {
+        "type": "object",
+        "properties": {
+          "cid": {
+            "type": "string"
+          },
+          "embedding_hash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "cid",
+          "embedding_hash"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}
