@@ -1,7 +1,9 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { C } from '../theme';
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 interface Props {
   score: number; // 0–1
@@ -15,9 +17,31 @@ export default function ScoreRing({ score, size = 130, label = 'Score' }: Props)
   const cx = size / 2;
   const cy = size / 2;
   const circ = 2 * Math.PI * r;
-  const offset = circ * (1 - Math.min(1, Math.max(0, score)));
+  const clamped = Math.min(1, Math.max(0, score));
 
   const color = score > 0.8 ? C.purple : score > 0.5 ? C.amber : C.red;
+
+  // One Animated value drives both the arc sweep and the count-up number.
+  // SVG props can't run on the native driver, so this stays on the JS driver.
+  const progress = useRef(new Animated.Value(0)).current;
+  const [display, setDisplay] = useState(0);
+
+  useEffect(() => {
+    const id = progress.addListener(({ value }) => setDisplay(Math.round(value * clamped * 100)));
+    progress.setValue(0);
+    Animated.timing(progress, {
+      toValue: 1,
+      duration: 900,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+    return () => progress.removeListener(id);
+  }, [clamped]);
+
+  const offset = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [circ, circ * (1 - clamped)],
+  });
 
   return (
     <View style={styles.wrap}>
@@ -31,7 +55,7 @@ export default function ScoreRing({ score, size = 130, label = 'Score' }: Props)
         {/* Track */}
         <Circle cx={cx} cy={cy} r={r} stroke={C.border} strokeWidth={sw} fill="none" />
         {/* Progress */}
-        <Circle
+        <AnimatedCircle
           cx={cx} cy={cy} r={r}
           stroke={score > 0.8 ? 'url(#ring)' : color}
           strokeWidth={sw}
@@ -44,7 +68,7 @@ export default function ScoreRing({ score, size = 130, label = 'Score' }: Props)
         />
       </Svg>
       <View style={[styles.center, { width: size, height: size }]}>
-        <Text style={styles.score}>{(score * 100).toFixed(0)}</Text>
+        <Text style={styles.score}>{display}</Text>
         <Text style={styles.label}>{label}</Text>
       </View>
     </View>

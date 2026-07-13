@@ -3,10 +3,12 @@ import {
   ActivityIndicator, Alert, Animated, Clipboard,
   ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { generateKeypair, loadKeypair, deleteKeypair, KeyPair } from '../services/keystore';
 import { gateway } from '../services/gateway';
-import { C, radius } from '../theme';
+import PressableScale from '../components/PressableScale';
+import { C, radius, shadow } from '../theme';
 
 function CopyBtn({ value, label }: { value: string; label?: string }) {
   const [copied, setCopied] = useState(false);
@@ -23,7 +25,8 @@ function CopyBtn({ value, label }: { value: string; label?: string }) {
   return (
     <TouchableOpacity onPress={tap} activeOpacity={0.8}>
       <Animated.View style={[styles.copyBtn, { transform: [{ scale }], backgroundColor: copied ? C.greenD : C.purpleD }]}>
-        <Text style={[styles.copyText, { color: copied ? C.green : C.purpleL }]}>{copied ? '✓ Copied' : label ?? 'Copy'}</Text>
+        <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={13} color={copied ? C.green : C.purpleL} />
+        <Text style={[styles.copyText, { color: copied ? C.green : C.purpleL }]}>{copied ? 'Copied' : label ?? 'Copy'}</Text>
       </Animated.View>
     </TouchableOpacity>
   );
@@ -84,12 +87,12 @@ export default function WalletScreen({ onNeedOnboarding }: { onNeedOnboarding?: 
   if (!keypair) {
     return (
       <View style={[styles.screen, styles.center, { paddingTop: insets.top }]}>
-        <View style={styles.emptyIcon}><Text style={{ fontSize: 44 }}>◈</Text></View>
+        <View style={styles.emptyIcon}><Ionicons name="wallet-outline" size={40} color={C.purpleL} /></View>
         <Text style={styles.emptyTitle}>No Wallet</Text>
         <Text style={styles.emptySub}>Generate an sr25519 keypair to start mining. Your private key never leaves this device.</Text>
-        <TouchableOpacity style={styles.createBtn} onPress={generate} disabled={generating} activeOpacity={0.85}>
+        <PressableScale style={styles.createBtn} onPress={generate} disabled={generating}>
           {generating ? <ActivityIndicator color="#fff" /> : <Text style={styles.createBtnText}>Generate Keypair</Text>}
-        </TouchableOpacity>
+        </PressableScale>
       </View>
     );
   }
@@ -115,7 +118,8 @@ export default function WalletScreen({ onNeedOnboarding }: { onNeedOnboarding?: 
           )}
         </View>
         <View style={styles.secureChip}>
-          <Text style={styles.secureText}>🔒 Secure Enclave</Text>
+          <Ionicons name="lock-closed" size={11} color={C.green} />
+          <Text style={styles.secureText}>Secure Enclave</Text>
         </View>
       </View>
 
@@ -123,7 +127,7 @@ export default function WalletScreen({ onNeedOnboarding }: { onNeedOnboarding?: 
       <SectionCard title="MINING IDENTITY">
         <View style={styles.identityRow}>
           <View style={styles.avatar}>
-            <Text style={{ fontSize: 22, color: C.purpleL }}>◈</Text>
+            <Ionicons name="finger-print" size={22} color={C.purpleL} />
           </View>
           <View style={styles.identityInfo}>
             <Text style={styles.identityAddress} selectable>{ss58Short}</Text>
@@ -134,7 +138,8 @@ export default function WalletScreen({ onNeedOnboarding }: { onNeedOnboarding?: 
           <CopyBtn value={keypair.ss58} label="Copy SS58" />
         </View>
         <View style={styles.safeTag}>
-          <Text style={styles.safeTagText}>↑ Safe to share · This is your public hotkey</Text>
+          <Ionicons name="arrow-up-circle-outline" size={13} color={C.green} />
+          <Text style={styles.safeTagText}>Safe to share · This is your public hotkey</Text>
         </View>
       </SectionCard>
 
@@ -185,9 +190,10 @@ export default function WalletScreen({ onNeedOnboarding }: { onNeedOnboarding?: 
       )}
 
       {/* Danger zone */}
-      <TouchableOpacity style={styles.deleteBtn} onPress={del} activeOpacity={0.8}>
+      <PressableScale style={styles.deleteBtn} onPress={del} dim={false}>
+        <Ionicons name="trash-outline" size={16} color={C.red} />
         <Text style={styles.deleteBtnText}>Delete Wallet from Device</Text>
-      </TouchableOpacity>
+      </PressableScale>
     </ScrollView>
   );
 }
@@ -201,10 +207,10 @@ const styles = StyleSheet.create({
   networkRow:   { flexDirection: 'row', alignItems: 'center', gap: 6 },
   liveGreen:    { width: 6, height: 6, borderRadius: 3, backgroundColor: C.green },
   networkText:  { color: C.textSub, fontSize: 12 },
-  secureChip:   { backgroundColor: C.greenD, borderRadius: radius.full, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: C.green + '33' },
+  secureChip:   { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.greenD, borderRadius: radius.full, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: C.green + '33' },
   secureText:   { color: C.green, fontSize: 11, fontWeight: '600' },
   // Cards
-  card:         { marginHorizontal: 16, marginBottom: 12, backgroundColor: C.bgCard, borderRadius: radius.xl, padding: 20, borderWidth: 1, borderColor: C.border },
+  card:         { marginHorizontal: 16, marginBottom: 12, backgroundColor: C.bgCard, borderRadius: radius.xl, padding: 20, borderWidth: 1, borderColor: C.border, ...shadow.card },
   cardDanger:   { borderColor: C.red + '33' },
   cardTitle:    { color: C.textSub, fontSize: 10, fontWeight: '700', letterSpacing: 1.2, marginBottom: 16, textTransform: 'uppercase' },
   // Identity
@@ -213,10 +219,10 @@ const styles = StyleSheet.create({
   identityInfo: { flex: 1, gap: 3 },
   identityAddress: { color: C.text, fontSize: 14, fontWeight: '700', fontFamily: 'monospace' },
   identityHex:  { color: C.textDim, fontSize: 10, fontFamily: 'monospace' },
-  safeTag:      { backgroundColor: C.greenD, borderRadius: radius.sm, paddingHorizontal: 10, paddingVertical: 6 },
+  safeTag:      { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.greenD, borderRadius: radius.sm, paddingHorizontal: 10, paddingVertical: 6 },
   safeTagText:  { color: C.green, fontSize: 11, fontWeight: '500' },
   // Copy
-  copyBtn:      { borderRadius: radius.sm, paddingHorizontal: 12, paddingVertical: 6 },
+  copyBtn:      { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: radius.sm, paddingHorizontal: 12, paddingVertical: 6 },
   copyText:     { fontSize: 12, fontWeight: '700' },
   // Phrase
   phraseHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
@@ -236,12 +242,12 @@ const styles = StyleSheet.create({
   netKey:       { color: C.textSub, fontSize: 13 },
   netVal:       { color: C.text, fontSize: 13, fontWeight: '600', fontFamily: 'monospace' },
   // Empty
-  emptyIcon:    { width: 88, height: 88, borderRadius: 44, backgroundColor: C.purpleD, alignItems: 'center', justifyContent: 'center', marginBottom: 20, borderWidth: 1, borderColor: C.borderAct },
+  emptyIcon:    { width: 88, height: 88, borderRadius: 44, backgroundColor: C.purpleD, alignItems: 'center', justifyContent: 'center', marginBottom: 20, borderWidth: 1, borderColor: C.borderAct, ...shadow.glow },
   emptyTitle:   { color: C.text, fontSize: 22, fontWeight: '800', marginBottom: 10 },
   emptySub:     { color: C.textSub, fontSize: 14, textAlign: 'center', lineHeight: 22, marginBottom: 28, maxWidth: 280 },
-  createBtn:    { backgroundColor: C.purple, borderRadius: radius.full, paddingVertical: 16, paddingHorizontal: 36 },
+  createBtn:    { backgroundColor: C.purple, borderRadius: radius.full, paddingVertical: 16, paddingHorizontal: 36, ...shadow.glow },
   createBtnText:{ color: '#fff', fontSize: 15, fontWeight: '700' },
   // Delete
-  deleteBtn:    { marginHorizontal: 16, marginTop: 8, backgroundColor: C.bgCard, borderRadius: radius.lg, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: C.red + '33' },
+  deleteBtn:    { flexDirection: 'row', gap: 8, marginHorizontal: 16, marginTop: 8, backgroundColor: C.bgCard, borderRadius: radius.lg, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.red + '33' },
   deleteBtnText:{ color: C.red, fontSize: 14, fontWeight: '600' },
 });

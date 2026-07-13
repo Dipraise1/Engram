@@ -1,21 +1,25 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator, Alert, Animated,
-  ScrollView, StyleSheet, Text, TouchableOpacity, View,
+  ScrollView, StyleSheet, Text, View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { gateway, Tier } from '../services/gateway';
 import { loadKeypair } from '../services/keystore';
-import { C, radius } from '../theme';
+import PressableScale from '../components/PressableScale';
+import { C, radius, shadow } from '../theme';
+
+type IconName = keyof typeof Ionicons.glyphMap;
 
 const SESSION_KEY = 'active_session_id';
 const STEPS = ['Tier', 'Duration', 'Confirm'];
 const DURATIONS = [{ label: '1 hour', hours: 1 }, { label: '6 hours', hours: 6 }, { label: '24 hours', hours: 24 }, { label: '7 days', hours: 168 }];
-const TIER_META: Record<string, { icon: string; tagline: string; accent: string }> = {
-  lite:     { icon: '🌱', tagline: 'Light tasks & testing',   accent: C.cyan },
-  standard: { icon: '⚡', tagline: 'Best value for miners',   accent: C.purple },
-  pro:      { icon: '🚀', tagline: 'Maximum performance',     accent: C.amber },
+const TIER_META: Record<string, { icon: IconName; tagline: string; accent: string }> = {
+  lite:     { icon: 'leaf',  tagline: 'Light tasks & testing', accent: C.cyan },
+  standard: { icon: 'flash', tagline: 'Best value for miners', accent: C.purple },
+  pro:      { icon: 'rocket', tagline: 'Maximum performance',  accent: C.amber },
 };
 
 function StepIndicator({ current }: { current: number }) {
@@ -28,7 +32,9 @@ function StepIndicator({ current }: { current: number }) {
           <React.Fragment key={s}>
             <View style={si.step}>
               <View style={[si.circle, done && si.done, active && si.active]}>
-                <Text style={[si.num, (done || active) && si.numActive]}>{done ? '✓' : i + 1}</Text>
+                {done
+                  ? <Ionicons name="checkmark" size={15} color={C.purpleL} />
+                  : <Text style={[si.num, active && si.numActive]}>{i + 1}</Text>}
               </View>
               <Text style={[si.label, active && si.labelActive]}>{s}</Text>
             </View>
@@ -123,17 +129,18 @@ export default function StartMiningScreen({ navigation }: any) {
             <View style={styles.stepWrap}>
               <Text style={styles.stepHeading}>Choose compute tier</Text>
               {tiers.map(tier => {
-                const meta    = TIER_META[tier.tier] ?? { icon: '⚙️', tagline: '', accent: C.purple };
+                const meta    = TIER_META[tier.tier] ?? { icon: 'cog' as IconName, tagline: '', accent: C.purple };
                 const active  = selTier === tier.tier;
                 return (
-                  <TouchableOpacity
+                  <PressableScale
                     key={tier.tier}
                     style={[styles.tierCard, active && { borderColor: meta.accent, backgroundColor: meta.accent + '12' }]}
                     onPress={() => setSelTier(tier.tier)}
-                    activeOpacity={0.8}
+                    scaleTo={0.98}
+                    dim={false}
                   >
                     <View style={[styles.tierIconWrap, { backgroundColor: meta.accent + '22' }]}>
-                      <Text style={{ fontSize: 26 }}>{meta.icon}</Text>
+                      <Ionicons name={meta.icon} size={24} color={meta.accent} />
                     </View>
                     <View style={styles.tierInfo}>
                       <Text style={styles.tierName}>{tier.tier.charAt(0).toUpperCase() + tier.tier.slice(1)}</Text>
@@ -146,13 +153,14 @@ export default function StartMiningScreen({ navigation }: any) {
                       </Text>
                       <Text style={styles.tierPriceSub}>/ hour</Text>
                     </View>
-                    {active && <View style={[styles.activeCheck, { backgroundColor: meta.accent }]}><Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>✓</Text></View>}
-                  </TouchableOpacity>
+                    {active && <View style={[styles.activeCheck, { backgroundColor: meta.accent }]}><Ionicons name="checkmark" size={13} color="#fff" /></View>}
+                  </PressableScale>
                 );
               })}
-              <TouchableOpacity style={styles.nextBtn} onPress={() => animateTo(1)} activeOpacity={0.85}>
-                <Text style={styles.nextBtnText}>Continue →</Text>
-              </TouchableOpacity>
+              <PressableScale style={styles.nextBtn} onPress={() => animateTo(1)}>
+                <Text style={styles.nextBtnText}>Continue</Text>
+                <Ionicons name="arrow-forward" size={16} color="#fff" />
+              </PressableScale>
             </View>
           )}
 
@@ -165,25 +173,28 @@ export default function StartMiningScreen({ navigation }: any) {
                   const active = selHours === d.hours;
                   const usd    = activeTier ? (activeTier.price_akt_per_hour * d.hours * 2).toFixed(2) : '—';
                   return (
-                    <TouchableOpacity
+                    <PressableScale
                       key={d.hours}
                       style={[styles.durCard, active && styles.durCardActive]}
                       onPress={() => setSelHours(d.hours)}
-                      activeOpacity={0.8}
+                      scaleTo={0.97}
+                      dim={false}
                     >
                       <Text style={[styles.durLabel, active && styles.durLabelActive]}>{d.label}</Text>
                       <Text style={[styles.durPrice, active && { color: C.purpleL }]}>${usd}</Text>
-                    </TouchableOpacity>
+                    </PressableScale>
                   );
                 })}
               </View>
               <View style={styles.btnRow}>
-                <TouchableOpacity style={styles.backBtn} onPress={() => animateTo(0)} activeOpacity={0.8}>
-                  <Text style={styles.backBtnText}>← Back</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.nextBtn, { flex: 1 }]} onPress={() => animateTo(2)} activeOpacity={0.85}>
-                  <Text style={styles.nextBtnText}>Continue →</Text>
-                </TouchableOpacity>
+                <PressableScale style={styles.backBtn} onPress={() => animateTo(0)}>
+                  <Ionicons name="arrow-back" size={16} color={C.textSub} />
+                  <Text style={styles.backBtnText}>Back</Text>
+                </PressableScale>
+                <PressableScale style={[styles.nextBtn, { flex: 1 }]} onPress={() => animateTo(2)}>
+                  <Text style={styles.nextBtnText}>Continue</Text>
+                  <Ionicons name="arrow-forward" size={16} color="#fff" />
+                </PressableScale>
               </View>
             </View>
           )}
@@ -193,7 +204,7 @@ export default function StartMiningScreen({ navigation }: any) {
             <View style={styles.stepWrap}>
               <Text style={styles.stepHeading}>Confirm & pay</Text>
               <View style={styles.summaryCard}>
-                <SummaryRow k="Tier" v={(selTier.charAt(0).toUpperCase() + selTier.slice(1)) + ` ${TIER_META[selTier]?.icon}`} />
+                <SummaryRow k="Tier" v={selTier.charAt(0).toUpperCase() + selTier.slice(1)} />
                 <SummaryRow k="Duration" v={selHours < 24 ? `${selHours} hour${selHours > 1 ? 's' : ''}` : `${selHours / 24} day${selHours / 24 > 1 ? 's' : ''}`} />
                 <SummaryRow k="Compute" v={activeTier ? `${activeTier.cpu_vcpu} vCPU · ${activeTier.memory_gb} GB RAM` : '—'} />
                 <View style={styles.divider} />
@@ -205,31 +216,35 @@ export default function StartMiningScreen({ navigation }: any) {
               </View>
 
               <View style={styles.trustGrid}>
-                {[
-                  { icon: '🔐', text: 'Key stays on device' },
-                  { icon: '⛓', text: 'On-chain payment' },
-                  { icon: '🌐', text: 'Akash Network' },
-                  { icon: '⚡', text: 'Ready in ~3 min' },
-                ].map(b => (
+                {([
+                  { icon: 'lock-closed', text: 'Key stays on device' },
+                  { icon: 'link',        text: 'On-chain payment' },
+                  { icon: 'globe',       text: 'Akash Network' },
+                  { icon: 'time',        text: 'Ready in ~3 min' },
+                ] as { icon: IconName; text: string }[]).map(b => (
                   <View key={b.text} style={styles.trustChip}>
-                    <Text>{b.icon}</Text>
+                    <Ionicons name={b.icon} size={13} color={C.purpleL} />
                     <Text style={styles.trustText}>{b.text}</Text>
                   </View>
                 ))}
               </View>
 
               <View style={styles.btnRow}>
-                <TouchableOpacity style={styles.backBtn} onPress={() => animateTo(1)} activeOpacity={0.8}>
-                  <Text style={styles.backBtnText}>← Back</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.payBtn, loading && { opacity: 0.5 }]} onPress={launch} disabled={loading} activeOpacity={0.85}>
+                <PressableScale style={styles.backBtn} onPress={() => animateTo(1)}>
+                  <Ionicons name="arrow-back" size={16} color={C.textSub} />
+                  <Text style={styles.backBtnText}>Back</Text>
+                </PressableScale>
+                <PressableScale style={[styles.payBtn, loading && { opacity: 0.5 }]} onPress={launch} disabled={loading}>
                   {loading ? <ActivityIndicator color="#fff" /> : (
-                    <View style={{ alignItems: 'center' }}>
-                      <Text style={styles.payBtnText}>Pay & Start Mining</Text>
-                      <Text style={styles.payBtnSub}>${totalUSD} USDC</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Ionicons name="rocket" size={16} color="#fff" />
+                      <View style={{ alignItems: 'center' }}>
+                        <Text style={styles.payBtnText}>Pay & Start Mining</Text>
+                        <Text style={styles.payBtnSub}>${totalUSD} USDC</Text>
+                      </View>
                     </View>
                   )}
-                </TouchableOpacity>
+                </PressableScale>
               </View>
             </View>
           )}
@@ -259,7 +274,7 @@ const styles = StyleSheet.create({
   stepWrap:     { paddingHorizontal: 16, gap: 12 },
   stepHeading:  { color: C.textSub, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', paddingHorizontal: 8, marginBottom: 4 },
   // Tier cards
-  tierCard:     { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: C.bgCard, borderRadius: radius.lg, padding: 16, borderWidth: 1.5, borderColor: C.border, position: 'relative' },
+  tierCard:     { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: C.bgCard, borderRadius: radius.lg, padding: 16, borderWidth: 1.5, borderColor: C.border, position: 'relative', ...shadow.card },
   tierIconWrap: { width: 52, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   tierInfo:     { flex: 1, gap: 2 },
   tierName:     { color: C.text, fontSize: 16, fontWeight: '700' },
@@ -277,7 +292,7 @@ const styles = StyleSheet.create({
   durLabelActive:{ color: C.text },
   durPrice:     { color: C.textDim, fontSize: 13, fontWeight: '600' },
   // Summary
-  summaryCard:  { backgroundColor: C.bgCard, borderRadius: radius.xl, padding: 20, borderWidth: 1, borderColor: C.border },
+  summaryCard:  { backgroundColor: C.bgCard, borderRadius: radius.xl, padding: 20, borderWidth: 1, borderColor: C.border, ...shadow.card },
   summaryRow:   { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10 },
   summaryKey:   { color: C.textSub, fontSize: 14 },
   summaryVal:   { color: C.text, fontSize: 14, fontWeight: '600' },
@@ -292,9 +307,9 @@ const styles = StyleSheet.create({
   trustText:    { color: C.textSub, fontSize: 11 },
   // Buttons
   btnRow:       { flexDirection: 'row', gap: 10 },
-  backBtn:      { backgroundColor: C.bgCard, borderRadius: radius.lg, paddingVertical: 16, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.border },
+  backBtn:      { flexDirection: 'row', gap: 6, backgroundColor: C.bgCard, borderRadius: radius.lg, paddingVertical: 16, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.border },
   backBtnText:  { color: C.textSub, fontSize: 14, fontWeight: '600' },
-  nextBtn:      { backgroundColor: C.purple, borderRadius: radius.lg, paddingVertical: 16, alignItems: 'center' },
+  nextBtn:      { flexDirection: 'row', gap: 8, backgroundColor: C.purple, borderRadius: radius.lg, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', ...shadow.glow },
   nextBtnText:  { color: '#fff', fontSize: 15, fontWeight: '700' },
   payBtn:       { flex: 1, backgroundColor: C.purple, borderRadius: radius.lg, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
   payBtnText:   { color: '#fff', fontSize: 15, fontWeight: '800' },

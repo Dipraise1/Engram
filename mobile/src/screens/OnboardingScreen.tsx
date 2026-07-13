@@ -3,9 +3,11 @@ import {
   ActivityIndicator, Alert, Animated, Dimensions,
   FlatList, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { generateKeypair, KeyPair } from '../services/keystore';
-import { C, radius } from '../theme';
+import PressableScale from '../components/PressableScale';
+import { C, radius, shadow } from '../theme';
 
 const W = Dimensions.get('window').width;
 
@@ -92,11 +94,14 @@ export default function OnboardingScreen({ onComplete }: Props) {
             Your private key never leaves this device. We cannot recover it for you.
           </Text>
         </View>
-        <TouchableOpacity style={styles.primaryBtn} onPress={create} disabled={generating} activeOpacity={0.85}>
+        <PressableScale style={styles.primaryBtn} onPress={create} disabled={generating}>
           {generating
             ? <ActivityIndicator color="#fff" />
-            : <Text style={styles.primaryBtnText}>Generate Keypair</Text>}
-        </TouchableOpacity>
+            : <>
+                <Ionicons name="key" size={16} color="#fff" />
+                <Text style={styles.primaryBtnText}>Generate Keypair</Text>
+              </>}
+        </PressableScale>
       </View>
     );
   }
@@ -119,9 +124,10 @@ export default function OnboardingScreen({ onComplete }: Props) {
             </View>
           ))}
         </View>
-        <TouchableOpacity style={styles.primaryBtn} onPress={() => setStep('confirm')} activeOpacity={0.85}>
-          <Text style={styles.primaryBtnText}>I've saved it →</Text>
-        </TouchableOpacity>
+        <PressableScale style={styles.primaryBtn} onPress={() => setStep('confirm')}>
+          <Text style={styles.primaryBtnText}>I've saved it</Text>
+          <Ionicons name="arrow-forward" size={16} color="#fff" />
+        </PressableScale>
       </View>
     );
   }
@@ -146,9 +152,10 @@ export default function OnboardingScreen({ onComplete }: Props) {
             </View>
           ))}
         </View>
-        <TouchableOpacity style={styles.primaryBtn} onPress={confirmPhrase} activeOpacity={0.85}>
+        <PressableScale style={styles.primaryBtn} onPress={confirmPhrase}>
+          <Ionicons name="checkmark-circle" size={16} color="#fff" />
           <Text style={styles.primaryBtnText}>Confirm & Enter App</Text>
-        </TouchableOpacity>
+        </PressableScale>
       </View>
     );
   }
@@ -199,13 +206,13 @@ export default function OnboardingScreen({ onComplete }: Props) {
             <Text style={styles.backText}>← Back</Text>
           </TouchableOpacity>
         )}
-        <TouchableOpacity
+        <PressableScale
           style={[styles.primaryBtn, { flex: 1, marginLeft: page > 0 ? 12 : 0, backgroundColor: SLIDES[page].accent }]}
           onPress={goNext}
-          activeOpacity={0.85}
         >
-          <Text style={styles.primaryBtnText}>{page === SLIDES.length - 1 ? 'Get Started' : 'Next →'}</Text>
-        </TouchableOpacity>
+          <Text style={styles.primaryBtnText}>{page === SLIDES.length - 1 ? 'Get Started' : 'Next'}</Text>
+          <Ionicons name="arrow-forward" size={16} color="#fff" />
+        </PressableScale>
       </View>
     </View>
   );
@@ -222,7 +229,7 @@ const styles = StyleSheet.create({
   dot:          { height: 6, borderRadius: 3 },
   footer:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24 },
   backText:     { color: C.textSub, fontSize: 15, fontWeight: '600', paddingVertical: 16, paddingHorizontal: 8 },
-  primaryBtn:   { backgroundColor: C.purple, borderRadius: radius.full, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' },
+  primaryBtn:   { flexDirection: 'row', gap: 8, backgroundColor: C.purple, borderRadius: radius.full, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', ...shadow.glow },
   primaryBtnText:{ color: '#fff', fontSize: 15, fontWeight: '700', letterSpacing: 0.3 },
   // Create wallet
   createEmoji:  { alignSelf: 'center', width: 100, height: 100, borderRadius: 50, backgroundColor: C.purpleD, borderWidth: 1, borderColor: C.borderAct, alignItems: 'center', justifyContent: 'center', marginBottom: 32 },

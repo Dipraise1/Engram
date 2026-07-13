@@ -1,13 +1,16 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, radius } from '../theme';
 
-const TABS = [
-  { name: 'Dashboard', icon: '⛏', label: 'Mine' },
-  { name: 'Start Mining', icon: '▶', label: 'Launch' },
-  { name: 'Wallet', icon: '◈', label: 'Wallet' },
+type IconName = keyof typeof Ionicons.glyphMap;
+
+const TABS: { name: string; icon: IconName; label: string }[] = [
+  { name: 'Dashboard',    icon: 'pulse',           label: 'Mine' },
+  { name: 'Start Mining', icon: 'rocket',          label: 'Launch' },
+  { name: 'Wallet',       icon: 'shield-checkmark', label: 'Wallet' },
 ];
 
 export default function TabBar({ state, navigation }: BottomTabBarProps) {
@@ -37,7 +40,7 @@ export default function TabBar({ state, navigation }: BottomTabBarProps) {
 }
 
 function TabItem({ icon, label, focused, onPress }: {
-  icon: string; label: string; focused: boolean; onPress: () => void;
+  icon: IconName; label: string; focused: boolean; onPress: () => void;
 }) {
   const glow = useRef(new Animated.Value(focused ? 1 : 0)).current;
   const scale = useRef(new Animated.Value(focused ? 1 : 0.9)).current;
@@ -56,7 +59,7 @@ function TabItem({ icon, label, focused, onPress }: {
     <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.item}>
       <Animated.View style={[styles.pill, { backgroundColor: bgColor, borderColor }]}>
         <Animated.View style={[styles.pillInner, { transform: [{ scale }] }]}>
-          <Text style={[styles.icon, { opacity: focused ? 1 : 0.35 }]}>{icon}</Text>
+          <Ionicons name={icon} size={17} color={focused ? C.purpleL : C.textDim} />
           <Text style={[styles.label, { color: focused ? C.purpleL : C.textDim }]}>{label}</Text>
         </Animated.View>
       </Animated.View>
@@ -70,6 +73,5 @@ const styles = StyleSheet.create({
   item:      { flex: 1, alignItems: 'center' },
   pill:      { borderRadius: radius.full, borderWidth: 1, overflow: 'hidden' },
   pillInner: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8 },
-  icon:      { fontSize: 15 },
   label:     { fontSize: 12, fontWeight: '600', letterSpacing: 0.3 },
 });

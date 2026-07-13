@@ -40,3 +40,21 @@ export const radius = {
   xl: 28,
   full: 999,
 } as const;
+
+// Elevation presets — soft shadows that read against the near-black background.
+export const shadow = {
+  card: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  glow: {
+    shadowColor: C.purple,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 18,
+    elevation: 10,
+  },
+} as const;
