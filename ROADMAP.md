@@ -31,17 +31,17 @@ This document tracks where Engram is, where it's going, and what contributions m
 
 *Goal: harden the protocol for economic stake and real data.*
 
-- [ ] **Erasure coding** — replace 3× replication with (k, n) shards so any k recover the vector; reduces redundancy cost and improves durability
+- [x] **Erasure coding** — (k, n) shards so any k recover the vector; 1.67× overhead vs 3× replication
 - [ ] **Mainnet registration** — register subnet on Bittensor mainnet; validator weight-setting live
-- [ ] **TLS on all miner endpoints** — nginx reverse proxy + Let's Encrypt; `MINER_USE_HTTPS=true` by default
-- [ ] **Slash execution** — validators submit slashing transactions for miners below the proof-rate threshold
-- [ ] **Staking gate on ingest** — minimum TAO stake required to write to the network (anti-spam)
+- [x] **TLS on miner endpoints** — `https://api.theengram.space` routes to the miner; nginx + Let's Encrypt
+- [x] **Slash execution** — slash registry; validators record miners below the proof-rate threshold
+- [x] **Staking gate on ingest** — minimum TAO stake required to write to the network (anti-spam)
 - [x] **Stake-weighted replication** — `ReplicationManager.register(reliability_map=...)` blends XOR proximity (60%) with miner reliability score (40%) to prefer proven miners for replica assignment
 - [x] **Miner reputation score** — persistent per-miner reliability record (`ReputationStore`) fed into `RewardManager`; EMA score + confidence discount for new miners; `reliability_map()` available to replication assignment
-- [ ] **Validator consensus** — multi-validator agreement on scores before weight-setting
+- [x] **Validator consensus** — multi-validator agreement on scores before weight-setting
 - [ ] **PyPI stable release** — `engram-subnet 1.0.0` with stable API contract
 
-**Help wanted:** erasure coding implementation, TLS automation, slashing transaction tests.
+**Help wanted:** mainnet registration dry-runs, slashing transaction tests, 1.0.0 API audit.
 
 ---
 
@@ -79,10 +79,9 @@ Issues marked [`bounty`](https://github.com/Dipraise1/Engram/labels/bounty) have
 
 | Issue | Bounty | Status |
 |-------|--------|--------|
-| TypeScript SDK | TBD | open |
-| Erasure coding (k,n) | TBD | open |
-| OpenAPI spec generation | TBD | open |
-| Recall benchmark suite | TBD | open |
+| TypeScript SDK ([#22](https://github.com/Dipraise1/Engram/issues/22)) | TBD | open |
+| OpenAPI spec generation ([#23](https://github.com/Dipraise1/Engram/issues/23)) | TBD | open |
+| Recall benchmark suite ([#24](https://github.com/Dipraise1/Engram/issues/24)) | TBD | open |
 
 ---
 

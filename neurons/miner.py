@@ -294,9 +294,9 @@ async def run() -> None:
             metagraph = subtensor.metagraph(netuid=netuid)
         except Exception as exc:
             logger.warning(f"Initial metagraph sync failed ({exc}) — starting with empty metagraph")
-            metagraph = bt.metagraph(netuid=netuid, network=network, lite=True, sync=False)
+            metagraph = bt.Metagraph(netuid=netuid, network=network, lite=True, sync=False)
     else:
-        metagraph = bt.metagraph(netuid=netuid, network=network, lite=True, sync=False)
+        metagraph = bt.Metagraph(netuid=netuid, network=network, lite=True, sync=False)
 
     # ── Core components ───────────────────────────────────────────────────────
     store              = build_store(backend)
