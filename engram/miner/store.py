@@ -244,7 +244,7 @@ class QdrantStore(VectorStore):
                 "cid": (r.payload or {}).get("cid", ""),
                 "metadata": {k: v for k, v in (r.payload or {}).items() if k not in _INTERNAL},
             }
-            for r in results[offset:]
+            for r in results[offset : offset + limit]
         ]
 
     def all_cids_and_hashes(self) -> "list[tuple[str, str]]":  # type: ignore[valid-type]

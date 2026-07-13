@@ -193,7 +193,11 @@ class ChallengeDispatcher:
 
         # Generate the expected response from the known embedding, then compare
         # using constant-time digest comparison to prevent timing oracle attacks.
-        expected_response = engram_core.generate_response(challenge, expected_embedding)  # type: ignore[name-defined]
+        try:
+            expected_response = engram_core.generate_response(challenge, expected_embedding)  # type: ignore[name-defined]
+        except (TypeError, ValueError) as exc:
+            logger.warning(f"Storage proof verification failed on malformed challenge: {exc}")
+            return False
         hash_ok  = hmac.compare_digest(expected_response.embedding_hash, response_embedding_hash)
         proof_ok = hmac.compare_digest(expected_response.proof, response_proof)
         return hash_ok and proof_ok
