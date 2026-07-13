@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "engram-subnet"
-version = "0.1.2"
+version = "1.0.0"
 description = "Decentralized IPFS-style vector database on Bittensor — the permanent semantic memory layer for AI."
 readme = "README.md"
 license = { text = "MIT" }
@@ -12,7 +12,7 @@ requires-python = ">=3.10"
 authors = [{ name = "Engram Contributors" }]
 keywords = ["bittensor", "vector-database", "embeddings", "decentralized", "RAG", "semantic-search"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
