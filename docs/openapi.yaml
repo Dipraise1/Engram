@@ -1,0 +1,889 @@
+openapi: 3.0.3
+info:
+  title: Engram Miner HTTP API
+  version: 1.0.0
+  description: |
+    aiohttp JSON API served by Engram miner neurons. All authenticated
+    endpoints use sr25519 signature-based request signing (Bittensor hotkey).
+  contact:
+    name: Engram
+    url: https://github.com/Dipraise1/Engram
+
+servers:
+  - url: http://localhost:8091
+    description: Default miner port
+
+paths:
+  /IngestSynapse:
+    post:
+      summary: Store an embedding and return a CID
+      operationId: ingest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IngestRequest'
+      responses:
+        '200':
+          description: Ingest result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestResponse'
+        '401':
+          $ref: '#/components/responses/AuthError'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+
+  /QuerySynapse:
+    post:
+      summary: Approximate nearest-neighbor search
+      operationId: query
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryRequest'
+      responses:
+        '200':
+          description: Top-K query results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+        '401':
+          $ref: '#/components/responses/AuthError'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+
+  /ChallengeSynapse:
+    post:
+      summary: Storage proof challenge response
+      description: |
+        Validator challenges the miner to prove it holds a CID.
+        Miner responds with embedding_hash and HMAC proof.
+      operationId: challenge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChallengeRequest'
+      responses:
+        '200':
+          description: Storage proof
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChallengeResponse'
+        '400':
+          description: Challenge expired or CID not found
+        '401':
+          $ref: '#/components/responses/AuthError'
+
+  /KeyShareSynapse:
+    post:
+      summary: Store a Shamir key share for a namespace
+      operationId: keyShareStore
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KeyShareStoreRequest'
+      responses:
+        '200':
+          description: Share stored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stored:
+                    type: boolean
+        '400':
+          description: Validation error
+        '401':
+          description: Missing or invalid namespace signature
+        '403':
+          description: Hotkey is not the namespace owner
+
+  /KeyShareRetrieve:
+    post:
+      summary: Retrieve this miner's key share for a namespace
+      operationId: keyShareRetrieve
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KeyShareRetrieveRequest'
+      responses:
+        '200':
+          description: Key share data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KeyShareData'
+        '401':
+          description: Missing or invalid namespace signature
+        '403':
+          description: Hotkey is not the namespace owner
+        '404':
+          description: No key share stored for this namespace
+
+  /AttestNamespace:
+    post:
+      summary: Attest a namespace to a Bittensor hotkey
+      operationId: attestNamespace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [namespace, owner_hotkey, signature, timestamp_ms]
+              properties:
+                namespace:
+                  type: string
+                owner_hotkey:
+                  type: string
+                  description: SS58 address of the owning hotkey
+                signature:
+                  type: string
+                  description: sr25519 hex signature
+                timestamp_ms:
+                  type: integer
+                  description: Unix ms timestamp
+      responses:
+        '200':
+          description: Attestation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  namespace:
+                    type: string
+                  trust_tier:
+                    type: string
+                  stake_tao:
+                    type: number
+        '400':
+          description: Validation error
+
+  /attestation/{namespace}:
+    get:
+      summary: Get trust info for a namespace
+      operationId: getAttestation
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Attestation info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  namespace:
+                    type: string
+                  owner_hotkey:
+                    type: string
+                  trust_tier:
+                    type: string
+                  stake_tao:
+                    type: number
+                  attested_at:
+                    type: integer
+                  attested:
+                    type: boolean
+
+  /retrieve/{cid}:
+    get:
+      summary: Retrieve stored metadata for a CID (public memories only)
+      operationId: retrieve
+      parameters:
+        - name: cid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Stored metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cid:
+                    type: string
+                  metadata:
+                    type: object
+        '404':
+          description: CID not found or is private
+
+    delete:
+      summary: Permanently delete a stored memory
+      operationId: deleteMemory
+      parameters:
+        - name: cid
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteRequest'
+      responses:
+        '200':
+          description: Deletion result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: boolean
+                  cid:
+                    type: string
+        '401':
+          $ref: '#/components/responses/AuthError'
+        '403':
+          description: Namespace ownership verification failed
+        '404':
+          description: CID not found
+
+  /RepairSynapse:
+    post:
+      summary: Return full embedding for replication repair
+      operationId: repairRetrieve
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RepairRequest'
+      responses:
+        '200':
+          description: Full embedding data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cid:
+                    type: string
+                  embedding:
+                    type: array
+                    items:
+                      type: number
+                  metadata:
+                    type: object
+        '401':
+          $ref: '#/components/responses/AuthError'
+        '404':
+          description: CID not found or private
+
+  /list:
+    post:
+      summary: Paginate and filter stored memories
+      operationId: listMemories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListRequest'
+      responses:
+        '200':
+          description: Paginated record list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  records:
+                    type: array
+                    items:
+                      type: object
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  limit:
+                    type: integer
+        '403':
+          description: Private namespace ownership verification failed
+        '404':
+          description: Namespace not found
+
+  /namespace:
+    post:
+      summary: Namespace management (localhost only)
+      description: Only accessible from loopback interface.
+      operationId: manageNamespace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, namespace]
+              properties:
+                action:
+                  type: string
+                  enum: [create, delete, rotate, list]
+                namespace:
+                  type: string
+                key:
+                  type: string
+                new_key:
+                  type: string
+      responses:
+        '200':
+          description: Action result
+        '403':
+          description: Forbidden (not loopback)
+        '400':
+          description: Invalid action or validation error
+
+  /prove-memory:
+    post:
+      summary: Prove memory ownership
+      operationId: proveMemory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProveMemoryRequest'
+      responses:
+        '200':
+          description: Proof result
+
+  /health:
+    get:
+      summary: Liveness probe
+      operationId: health
+      responses:
+        '200':
+          description: OK
+
+  /stats:
+    get:
+      summary: Runtime statistics
+      operationId: stats
+      responses:
+        '200':
+          description: Stats payload
+
+  /metagraph:
+    get:
+      summary: Metagraph information
+      operationId: metagraph
+      responses:
+        '200':
+          description: Metagraph data
+
+  /metrics:
+    get:
+      summary: Prometheus metrics endpoint
+      operationId: metrics
+      responses:
+        '200':
+          description: Prometheus-formatted metrics text
+
+  /wallet-stats:
+    get:
+      summary: Wallet tracking summary (localhost only)
+      operationId: walletStatsSummary
+      responses:
+        '200':
+          description: Wallet summary
+        '403':
+          description: Forbidden (not loopback)
+
+  /wallet-stats/{hotkey}:
+    get:
+      summary: Wallet tracking stats for a specific hotkey (localhost only)
+      operationId: walletStatsByHotkey
+      parameters:
+        - name: hotkey
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Wallet stats
+        '403':
+          description: Forbidden (not loopback)
+
+  /commitment:
+    get:
+      summary: Commitment information
+      operationId: commitment
+      responses:
+        '200':
+          description: Commitment data
+
+  /chat-history/{user_id}:
+    get:
+      summary: Load a user's chat history
+      operationId: getChatHistory
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: conv_id
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Chat messages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ChatMessage'
+
+  /chat-history:
+    post:
+      summary: Save a user's chat history
+      operationId: saveChatHistory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, messages]
+              properties:
+                user_id:
+                  type: string
+                conv_id:
+                  type: string
+                messages:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ChatMessage'
+      responses:
+        '200':
+          description: Save result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  saved:
+                    type: integer
+
+  /conversations/{user_id}:
+    get:
+      summary: List conversations for a user
+      operationId: listConversations
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Conversation list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Conversation'
+
+  /conversations:
+    post:
+      summary: Create a new conversation
+      operationId: createConversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, conv_id]
+              properties:
+                user_id:
+                  type: string
+                conv_id:
+                  type: string
+                title:
+                  type: string
+                  default: 'New Chat'
+      responses:
+        '200':
+          description: Creation result
+
+components:
+  securitySchemes:
+    Sr25519Signature:
+      type: apiKey
+      in: query
+      name: authorization
+      description: >
+        NOT a query parameter. All authenticated requests carry signature fields
+        inside the JSON body:
+
+          hotkey: SS58 address of the signing keypair
+          nonce:  Unix ms timestamp (±30s replay window)
+          signature: sr25519 hex signature over canonical message
+
+        Canonical message (UTF-8 bytes):
+          "{nonce}:{endpoint}:{body_hash}"
+
+        where body_hash = SHA-256 hex of JSON-serialised payload fields
+        (everything except hotkey/nonce/signature), sorted by key.
+      x-body-fields:
+        hotkey:
+          type: string
+          description: Bittensor SS58 address
+        nonce:
+          type: integer
+          description: Unix ms timestamp for replay protection
+        signature:
+          type: string
+          description: '0x-prefixed sr25519 hex signature'
+
+  schemas:
+    IngestRequest:
+      type: object
+      properties:
+        hotkey:
+          type: string
+          description: SS58 address (optional if REQUIRE_HOTKEY_SIG=false)
+        nonce:
+          type: integer
+        signature:
+          type: string
+        text:
+          type: string
+          description: Raw text to embed and store (mutually exclusive with raw_embedding)
+        raw_embedding:
+          type: array
+          items:
+            type: number
+          description: Pre-computed embedding vector
+        metadata:
+          type: object
+          description: Arbitrary key-value metadata
+        model_version:
+          type: string
+          default: v1
+        namespace:
+          type: string
+          description: Private collection name
+        namespace_hotkey:
+          type: string
+          description: SS58 hotkey that owns the namespace (sig-based auth)
+        namespace_sig:
+          type: string
+          description: 'sr25519 hex signature over "engram-ns:{namespace}:{namespace_timestamp_ms}"'
+        namespace_timestamp_ms:
+          type: integer
+          description: Unix ms timestamp for namespace_sig replay prevention
+        namespace_key:
+          type: string
+          description: '[Deprecated] Legacy key-based namespace auth'
+      oneOf:
+        - required: [text]
+        - required: [raw_embedding]
+
+    IngestResponse:
+      type: object
+      properties:
+        cid:
+          type: string
+          description: Content identifier
+        error:
+          type: string
+          nullable: true
+
+    QueryRequest:
+      type: object
+      properties:
+        hotkey:
+          type: string
+        nonce:
+          type: integer
+        signature:
+          type: string
+        query_text:
+          type: string
+          description: Query text to embed and search (mutually exclusive with query_vector)
+        query_vector:
+          type: array
+          items:
+            type: number
+          description: Pre-computed query vector
+        top_k:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+        namespace:
+          type: string
+        namespace_hotkey:
+          type: string
+        namespace_sig:
+          type: string
+        namespace_timestamp_ms:
+          type: integer
+        namespace_key:
+          type: string
+        filter:
+          type: object
+          additionalProperties:
+            type: string
+          description: Metadata key/value pairs for post-ANN filtering
+      oneOf:
+        - required: [query_text]
+        - required: [query_vector]
+
+    QueryResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/QueryResult'
+        latency_ms:
+          type: number
+          nullable: true
+          description: Miner-reported query latency in milliseconds
+        error:
+          type: string
+          nullable: true
+
+    QueryResult:
+      type: object
+      properties:
+        cid:
+          type: string
+        score:
+          type: number
+        metadata:
+          type: object
+
+    ChallengeRequest:
+      type: object
+      properties:
+        hotkey:
+          type: string
+        nonce:
+          type: integer
+        signature:
+          type: string
+        cid:
+          type: string
+          description: CID the miner is being challenged to prove storage of
+        nonce_hex:
+          type: string
+          description: 32-byte random nonce as hex string
+        expires_at:
+          type: integer
+          description: Unix timestamp after which the proof is invalid
+        validator_hotkey_hex:
+          type: string
+      required: [cid, nonce_hex, expires_at]
+
+    ChallengeResponse:
+      type: object
+      properties:
+        embedding_hash:
+          type: string
+          description: SHA-256 of the stored embedding bytes (hex)
+        proof:
+          type: string
+          description: HMAC-SHA256(nonce || embedding_hash)
+
+    KeyShareStoreRequest:
+      type: object
+      required: [namespace, share_index, share_hex, threshold, total]
+      properties:
+        namespace:
+          type: string
+        share_index:
+          type: integer
+          description: 1-based share index
+        share_hex:
+          type: string
+          description: Hex-encoded share bytes
+        threshold:
+          type: integer
+          description: Minimum shares needed to reconstruct (k)
+        total:
+          type: integer
+          description: Total shares created (n)
+        namespace_hotkey:
+          type: string
+        namespace_sig:
+          type: string
+        namespace_timestamp_ms:
+          type: integer
+
+    KeyShareRetrieveRequest:
+      type: object
+      required: [namespace]
+      properties:
+        namespace:
+          type: string
+        namespace_hotkey:
+          type: string
+        namespace_sig:
+          type: string
+        namespace_timestamp_ms:
+          type: integer
+
+    KeyShareData:
+      type: object
+      properties:
+        share_index:
+          type: integer
+        share_hex:
+          type: string
+        threshold:
+          type: integer
+        total:
+          type: integer
+        error:
+          type: string
+          nullable: true
+
+    DeleteRequest:
+      type: object
+      properties:
+        hotkey:
+          type: string
+        nonce:
+          type: integer
+        signature:
+          type: string
+        namespace_hotkey:
+          type: string
+        namespace_sig:
+          type: string
+        namespace_timestamp_ms:
+          type: integer
+
+    RepairRequest:
+      type: object
+      required: [cid]
+      properties:
+        hotkey:
+          type: string
+        nonce:
+          type: integer
+        signature:
+          type: string
+        cid:
+          type: string
+
+    ListRequest:
+      type: object
+      properties:
+        filter:
+          type: object
+          additionalProperties:
+            type: string
+        limit:
+          type: integer
+          default: 50
+          maximum: 200
+        offset:
+          type: integer
+          default: 0
+        namespace:
+          type: string
+          default: __public__
+        namespace_hotkey:
+          type: string
+        namespace_sig:
+          type: string
+        namespace_timestamp_ms:
+          type: integer
+
+    ProveMemoryRequest:
+      type: object
+      properties:
+        hotkey:
+          type: string
+        nonce:
+          type: integer
+        signature:
+          type: string
+
+    ChatMessage:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, assistant, system]
+        content:
+          type: string
+        ts:
+          type: integer
+
+    Conversation:
+      type: object
+      properties:
+        conv_id:
+          type: string
+        title:
+          type: string
+        created_at:
+          type: integer
+        updated_at:
+          type: integer
+
+  responses:
+    AuthError:
+      description: Authentication failed
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    RateLimit:
+      description: Rate limited
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              hint:
+                type: string
