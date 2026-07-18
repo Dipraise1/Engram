@@ -1,0 +1,559 @@
+openapi: "3.0.3"
+info:
+  title: Engram Miner API
+  description: |
+    HTTP API served by Engram miner neurons for embedding storage,
+    ANN search, namespace management, chat history, and attestation.
+    
+    **Authentication:** sr25519 signed-challenge headers.
+    See [Auth Scheme](#section/Authentication) for details.
+  version: "0.1.0"
+  contact:
+    name: Engram
+    url: https://github.com/Dipraise1/Engram
+
+servers:
+  - url: http://{miner_ip}:{miner_port}
+    description: Miner node
+    variables:
+      miner_ip:
+        default: "127.0.0.1"
+      miner_port:
+        default: "8091"
+
+tags:
+  - name: Ingestion
+    description: Embedding storage and content addressing
+  - name: Query
+    description: Approximate nearest-neighbor search
+  - name: Challenge
+    description: Storage proof verification
+  - name: Namespace
+    description: Private collection management
+  - name: Attestation
+    description: Namespace attestation registry
+  - name: Chat
+    description: Chat history and conversation management
+  - name: Health
+    description: Liveness and metrics
+
+components:
+  securitySchemes:
+    HotkeySignature:
+      type: apiKey
+      in: body
+      name: signature
+      description: |
+        sr25519 signature over `{nonce}:{endpoint}:{body_hash}`.
+        Include `hotkey`, `nonce`, and `signature` in every request body.
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+
+    IngestRequest:
+      type: object
+      required: [hotkey, nonce, signature]
+      properties:
+        hotkey:
+          type: string
+          description: SS58 hotkey address of signer
+        nonce:
+          type: integer
+          format: int64
+          description: Unix ms timestamp for replay protection
+        signature:
+          type: string
+          description: hex sr25519 signature
+        text:
+          type: string
+          description: Raw text to embed and store
+          example: "The quick brown fox jumps over the lazy dog"
+        raw_embedding:
+          type: array
+          items:
+            type: number
+          description: Pre-computed embedding vector (skips embedder)
+        metadata:
+          type: object
+          description: Arbitrary key-value metadata
+        model_version:
+          type: string
+          default: "v1"
+        namespace:
+          type: string
+          description: Private collection name
+        namespace_hotkey:
+          type: string
+          description: SS58 hotkey that owns the namespace
+        namespace_sig:
+          type: string
+          description: sr25519 sig over namespace request
+        namespace_timestamp_ms:
+          type: integer
+        namespace_key:
+          type: string
+          description: "[Deprecated] Legacy namespace key"
+      oneOf:
+        - required: [text]
+        - required: [raw_embedding]
+
+    IngestResponse:
+      type: object
+      properties:
+        cid:
+          type: string
+          description: Content identifier of stored embedding
+          example: "bafy...abc123"
+
+    QueryRequest:
+      type: object
+      required: [hotkey, nonce, signature]
+      properties:
+        hotkey:
+          type: string
+        nonce:
+          type: integer
+        signature:
+          type: string
+        query_text:
+          type: string
+          description: Natural language query
+        query_vector:
+          type: array
+          items:
+            type: number
+          description: Pre-computed query embedding vector
+        top_k:
+          type: integer
+          default: 10
+          minimum: 1
+          maximum: 100
+        namespace:
+          type: string
+        namespace_hotkey:
+          type: string
+        namespace_sig:
+          type: string
+        namespace_timestamp_ms:
+          type: integer
+        namespace_key:
+          type: string
+
+    QueryResult:
+      type: object
+      properties:
+        cid:
+          type: string
+        score:
+          type: number
+          format: float
+        metadata:
+          type: object
+
+    QueryResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/QueryResult'
+        latency_ms:
+          type: number
+          description: Query processing latency in milliseconds
+
+    ChallengeRequest:
+      type: object
+      required: [hotkey, nonce, signature]
+      properties:
+        hotkey:
+          type: string
+        nonce:
+          type: string
+          description: Validator-provided nonce (hex)
+        signature:
+          type: string
+        cid:
+          type: string
+          description: CID to prove storage of
+        embedding:
+          type: array
+          items:
+            type: number
+          description: Original embedding for proof computation
+        validator_hotkey:
+          type: string
+          description: Validator's SS58 hotkey for HMAC derivation
+
+    ChallengeResponse:
+      type: object
+      properties:
+        proof:
+          type: string
+          description: Computed storage proof
+        embedding_hash:
+          type: string
+          description: SHA-256 hash of the stored embedding
+
+    NamespaceRequest:
+      type: object
+      required: [hotkey, nonce, signature]
+      properties:
+        hotkey:
+          type: string
+        nonce:
+          type: integer
+        signature:
+          type: string
+        action:
+          type: string
+          enum: [create, list, delete]
+        namespace:
+          type: string
+        namespace_sig:
+          type: string
+        namespace_timestamp_ms:
+          type: integer
+
+    AttestRequest:
+      type: object
+      required: [hotkey, nonce, signature]
+      properties:
+        hotkey:
+          type: string
+        nonce:
+          type: integer
+        signature:
+          type: string
+        namespace:
+          type: string
+          description: Namespace to attest to
+
+    AttestationResponse:
+      type: object
+      properties:
+        namespace:
+          type: string
+        attestations:
+          type: array
+          items:
+            type: object
+            properties:
+              hotkey:
+                type: string
+              timestamp:
+                type: integer
+
+    ChatHistoryRequest:
+      type: object
+      required: [hotkey, nonce, signature]
+      properties:
+        hotkey:
+          type: string
+        nonce:
+          type: integer
+        signature:
+          type: string
+        user_id:
+          type: string
+        messages:
+          type: array
+          items:
+            type: object
+            properties:
+              role:
+                type: string
+                enum: [user, assistant]
+              content:
+                type: string
+              ts:
+                type: integer
+        conv_id:
+          type: string
+          description: Optional conversation ID
+
+    ConversationRequest:
+      type: object
+      required: [hotkey, nonce, signature]
+      properties:
+        hotkey:
+          type: string
+        nonce:
+          type: integer
+        signature:
+          type: string
+        action:
+          type: string
+          enum: [create, rename, delete]
+        conv_id:
+          type: string
+        title:
+          type: string
+
+    ConversationsResponse:
+      type: object
+      properties:
+        conversations:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              title:
+                type: string
+              created_at:
+                type: integer
+              updated_at:
+                type: integer
+
+    ChatHistoryResponse:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            type: object
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "ok"
+        version:
+          type: string
+
+paths:
+  /IngestSynapse:
+    post:
+      tags: [Ingestion]
+      summary: Store embedding and return CID
+      description: |
+        Stores text (or pre-computed embedding) and returns a content identifier (CID).
+        Supports private namespaces with sig-based or key-based auth.
+      security:
+        - HotkeySignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IngestRequest'
+      responses:
+        '200':
+          description: Embedding stored successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestResponse'
+        '400':
+          description: Invalid request (missing text/embedding)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /QuerySynapse:
+    post:
+      tags: [Query]
+      summary: ANN search for top-K results
+      description: |
+        Searches stored embeddings by text or vector, returns top-K results
+        ordered by cosine similarity.
+      security:
+        - HotkeySignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryRequest'
+      responses:
+        '200':
+          description: Query results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+        '400':
+          description: Invalid query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /ChallengeSynapse:
+    post:
+      tags: [Challenge]
+      summary: Prove storage of a CID
+      description: |
+        Verifies that the miner holds the embedding for a given CID
+        by computing an HMAC-based proof using the validator's nonce.
+      security:
+        - HotkeySignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChallengeRequest'
+      responses:
+        '200':
+          description: Proof computed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChallengeResponse'
+        '400':
+          description: Invalid or missing CID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /namespace:
+    post:
+      tags: [Namespace]
+      summary: Manage private namespaces
+      description: Create, list, or delete private embedding namespaces.
+      security:
+        - HotkeySignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NamespaceRequest'
+      responses:
+        '200':
+          description: Operation succeeded
+
+  /AttestNamespace:
+    post:
+      tags: [Attestation]
+      summary: Attest to a namespace
+      description: Register an attestation for a given namespace.
+      security:
+        - HotkeySignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttestRequest'
+      responses:
+        '200':
+          description: Attestation recorded
+
+  /attestation/{namespace}:
+    get:
+      tags: [Attestation]
+      summary: Get attestations for a namespace
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of attestations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttestationResponse'
+        '404':
+          description: Namespace not found
+
+  /chat-history:
+    post:
+      tags: [Chat]
+      summary: Save chat messages
+      description: Save or update chat history for a user.
+      security:
+        - HotkeySignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatHistoryRequest'
+      responses:
+        '200':
+          description: Messages saved
+
+  /chat-history/{user_id}:
+    get:
+      tags: [Chat]
+      summary: Get chat history
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Chat messages
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatHistoryResponse'
+
+  /conversations:
+    post:
+      tags: [Chat]
+      summary: Manage conversations
+      description: Create, rename, or delete a conversation.
+      security:
+        - HotkeySignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationRequest'
+      responses:
+        '200':
+          description: Operation succeeded
+
+  /conversations/{user_id}:
+    get:
+      tags: [Chat]
+      summary: List conversations
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationsResponse'
+
+  /health:
+    get:
+      tags: [Health]
+      summary: Liveness probe
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
