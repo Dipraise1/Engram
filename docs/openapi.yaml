@@ -1,0 +1,205 @@
+openapi: 3.0.3
+info:
+  title: Engram Miner HTTP API
+  description: HTTP endpoints for the Engram miner node. Auth uses sr25519 signed-challenge headers.
+  version: 0.1.0
+servers:
+  - url: http://localhost:8080
+    description: Local miner node
+components:
+  securitySchemes:
+    sr25519Auth:
+      type: apiKey
+      in: header
+      name: X-Auth-Signature
+      description: "Flow: GET /auth/challenge -> sign bytes with sr25519 keypair -> send hex sig in X-Auth-Signature + pubkey in X-Auth-PublicKey"
+  schemas:
+    IngestRequest:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        ttl_seconds:
+          type: integer
+    IngestResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [accepted, queued, failed]
+    QueryRequest:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+        top_k:
+          type: integer
+          default: 5
+        threshold:
+          type: number
+          format: float
+    QueryResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              score:
+                type: number
+              data:
+                type: string
+              metadata:
+                type: object
+    KeyShareSynapseRequest:
+      type: object
+      required: [hotkey, payload]
+      properties:
+        hotkey:
+          type: string
+        payload:
+          type: string
+    KeyShareRetrieveRequest:
+      type: object
+      required: [hotkey, shard_id]
+      properties:
+        hotkey:
+          type: string
+        shard_id:
+          type: string
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, down]
+        version:
+          type: string
+        uptime_seconds:
+          type: integer
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        "200":
+          description: Node healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /auth/challenge:
+    get:
+      summary: Get one-time sr25519 auth challenge
+      operationId: getChallenge
+      responses:
+        "200":
+          description: Challenge to sign
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  challenge:
+                    type: string
+                  expires_at:
+                    type: string
+                    format: date-time
+  /ingest:
+    post:
+      summary: Ingest data into miner memory
+      operationId: ingestData
+      security:
+        - sr25519Auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IngestRequest"
+      responses:
+        "202":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestResponse"
+        "401":
+          description: Unauthorized
+        "422":
+          description: Invalid input
+  /query:
+    post:
+      summary: Query miner memory
+      operationId: queryMemory
+      security:
+        - sr25519Auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QueryRequest"
+      responses:
+        "200":
+          description: Results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueryResponse"
+        "401":
+          description: Unauthorized
+  /key-share/synapse:
+    post:
+      summary: Submit KeyShareSynapse
+      operationId: keyShareSynapse
+      security:
+        - sr25519Auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KeyShareSynapseRequest"
+      responses:
+        "200":
+          description: Accepted
+        "401":
+          description: Unauthorized
+  /key-share/retrieve:
+    post:
+      summary: Retrieve key share
+      operationId: keyShareRetrieve
+      security:
+        - sr25519Auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KeyShareRetrieveRequest"
+      responses:
+        "200":
+          description: Key share payload
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payload:
+                    type: string
+        "404":
+          description: Not found
+        "401":
+          description: Unauthorized
