@@ -1,0 +1,307 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Engram Miner API",
+    "version": "1.0.0",
+    "description": "API for Engram miner endpoints.\n\n### Authentication\nAuth scheme uses sr25519 signed challenges. The caller typically includes their SS58 `hotkey`, a `nonce` (Unix ms timestamp), and a `signature` (hex sr25519 signature over the canonical message `nonce:endpoint:body_hash`)."
+  },
+  "components": {
+    "securitySchemes": {
+      "Sr25519Auth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "sr25519 signed-challenge headers (or body fields `hotkey`, `nonce`, `signature`)."
+      }
+    }
+  },
+  "security": [
+    {
+      "Sr25519Auth": []
+    }
+  ],
+  "paths": {
+    "/IngestSynapse": {
+      "post": {
+        "summary": "Ingest",
+        "description": "No description available.",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/QuerySynapse": {
+      "post": {
+        "summary": "Query",
+        "description": "No description available.",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/ChallengeSynapse": {
+      "post": {
+        "summary": "Challenge",
+        "description": "No description available.",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/namespace": {
+      "post": {
+        "summary": "Namespace",
+        "description": "Namespace management \u2014 create, delete, rotate key. Localhost only.",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/AttestNamespace": {
+      "post": {
+        "summary": "Attest",
+        "description": "Attest a namespace to a Bittensor hotkey.\n\nPOST /AttestNamespace\nBody: {\n  \"namespace\":    str,\n  \"owner_hotkey\": str (SS58),\n  \"signature\":    str (hex sr25519),\n  \"timestamp_ms\": int\n}\n\nAnyone can call this \u2014 but only the hotkey owner can produce a valid\nsignature, and the on-chain stake of that hotkey determines trust tier.",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/attestation/{namespace}": {
+      "get": {
+        "summary": "Attestation Get",
+        "description": "GET /attestation/{namespace} \u2014 return trust info for a namespace.",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/chat-history/{user_id}": {
+      "get": {
+        "summary": "Chat History Get",
+        "description": "GET /chat-history/{user_id}?conv_id=X \u2014 load a user's chat history.",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/chat-history": {
+      "post": {
+        "summary": "Chat History Post",
+        "description": "POST /chat-history \u2014 save a user's chat history.",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/conversations/{user_id}": {
+      "get": {
+        "summary": "Conversations Get",
+        "description": "GET /conversations/{user_id} \u2014 list all conversations for a user.",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/conversations": {
+      "post": {
+        "summary": "Conversations Post",
+        "description": "POST /conversations \u2014 create a new conversation.",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/conversations/{conv_id}": {
+      "patch": {
+        "summary": "Conversations Patch",
+        "description": "PATCH /conversations/{conv_id} \u2014 rename a conversation.",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Conversations Delete",
+        "description": "DELETE /conversations/{conv_id}?user_id=X \u2014 delete a conversation.",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/retrieve/{cid}": {
+      "get": {
+        "summary": "Retrieve",
+        "description": "GET /retrieve/{cid} \u2014 return stored metadata for a CID.\n\nPublic memories are freely readable.  Private namespace memories return\n404 regardless of whether the CID exists \u2014 callers must use an\nauthenticated query to access their own private data.",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete",
+        "description": "DELETE /retrieve/{cid} \u2014 permanently remove a stored memory.\n\nPublic memories require network auth (validator/miner hotkey via\nverify_request).  Private namespace memories additionally require the\ncaller to prove namespace ownership via namespace_hotkey + namespace_sig\n+ namespace_timestamp_ms in the JSON body.",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/RepairSynapse": {
+      "post": {
+        "summary": "Repair Retrieve",
+        "description": "POST /RepairSynapse \u2014 return full embedding for a CID so the validator\ncan copy it to under-replicated miners.  Requires network auth.",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/KeyShareSynapse": {
+      "post": {
+        "summary": "Key Share Store",
+        "description": "POST /KeyShareSynapse \u2014 store a Shamir key share for a namespace.\n\nCaller must prove namespace ownership via namespace_sig.  The miner\nstores one share per namespace and cannot reconstruct the full key alone.",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/KeyShareRetrieve": {
+      "post": {
+        "summary": "Key Share Retrieve",
+        "description": "POST /KeyShareRetrieve \u2014 return this miner's share for a namespace.\n\nCaller must prove namespace ownership via namespace_sig.  Returns the\nsingle share stored here; the client must collect K shares to reconstruct.",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/list": {
+      "post": {
+        "summary": "List",
+        "description": "POST /list \u2014 paginate and filter stored memories.\n\nBody (all optional):\n    filter                dict[str, str]  metadata key/value pairs (AND match)\n    limit                 int             max results (default 50, max 200)\n    offset                int             skip N records (default 0)\n    namespace             str             namespace to list (default public)\n    namespace_hotkey      str             required for private namespaces\n    namespace_sig         str             sr25519 ownership signature\n    namespace_timestamp_ms int            Unix ms timestamp for replay prevention",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "description": "No description available.",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/stats": {
+      "get": {
+        "summary": "Stats",
+        "description": "Public stats endpoint \u2014 rich counters for the dashboard.",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/metagraph": {
+      "get": {
+        "summary": "Metagraph",
+        "description": "Public metagraph snapshot \u2014 returns all registered neurons for the leaderboard.",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "summary": "Metrics",
+        "description": "Prometheus metrics \u2014 localhost only to avoid leaking operational data.",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/wallet-stats": {
+      "get": {
+        "summary": "Wallet Stats",
+        "description": "No description available.",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/wallet-stats/{hotkey}": {
+      "get": {
+        "summary": "Wallet Stats",
+        "description": "No description available.",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/commitment": {
+      "get": {
+        "summary": "Commitment",
+        "description": "GET /commitment \u2014 returns the Merkle root of this miner's full memory corpus.\n\nAI agents and validators can use this root to verify that a specific\nmemory (cid, embedding_hash) is genuinely stored here without downloading\nthe full index.  The root changes whenever a memory is added or removed.",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/prove-memory": {
+      "post": {
+        "summary": "Prove Memory",
+        "description": "POST /prove-memory \u2014 return a Merkle inclusion proof for one CID.\n\nBody: {\"cid\": \"v1::...\", \"embedding_hash\": \"<64-char hex>\"}\n\nAI agents use this to verify a specific memory is intact without\nfetching the entire store.  Returns the proof as a JSON object that\ncan be verified offline with engram_core.verify_inclusion().",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    }
+  }
+}
