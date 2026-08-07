@@ -1,0 +1,69 @@
+openapi: 3.0.3
+info:
+  title: Engram Miner API
+  description: API for decentralized IPFS-style vector database on Bittensor.
+  version: 0.1.2
+servers:
+  - url: http://localhost:8091
+    description: Local miner node
+paths:
+  /ChallengeSynapse:
+    post:
+      summary: Handle storage proof challenges
+      security:
+        - HmacChallengeProof: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cid, nonce_hex, expires_at, validator_hotkey_hex]
+              properties:
+                cid: {type: string}
+                nonce_hex: {type: string}
+                expires_at: {type: integer}
+                validator_hotkey_hex: {type: string}
+      responses:
+        '200':
+          description: Challenge response proof
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  embedding_hash: {type: string}
+                  proof: {type: string}
+  /stats:
+    get:
+      summary: Public miner operational statistics
+      responses:
+        '200':
+          description: Miner stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: {type: string}
+                  vectors: {type: integer}
+                  peers: {type: integer}
+                  uid: {type: integer}
+                  queries_today: {type: integer}
+                  p50_latency_ms: {type: number, nullable: true}
+                  proof_rate: {type: number, nullable: true}
+                  uptime_pct: {type: number}
+                  block: {type: integer, nullable: true}
+                  avg_score: {type: number, nullable: true}
+                  hotkey: {type: string}
+components:
+  securitySchemes:
+    Sr25519Signature:
+      type: http
+      scheme: bearer
+      bearerFormat: sr25519
+      description: "Validator/Miner sr25519 signature of the request payload."
+    HmacChallengeProof:
+      type: apiKey
+      in: header
+      name: X-Engram-Challenge-Proof
+      description: "HMAC-SHA256 proof binding (embedding_hash + nonce + validator_hotkey)."
