@@ -1,0 +1,570 @@
+openapi: 3.0.3
+info:
+  title: Engram Miner API
+  description: Auto-generated OpenAPI specification for Engram Miner HTTP endpoints.
+  version: 1.0.0
+components:
+  securitySchemes:
+    sr25519_auth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Request body must be signed. Validation depends on Bittensor SS58
+        hotkeys and sr25519 signatures.
+paths:
+  /IngestSynapse:
+    post:
+      summary: ''
+      description: ''
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+      security:
+      - sr25519_auth: []
+  /QuerySynapse:
+    post:
+      summary: ''
+      description: ''
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+      security:
+      - sr25519_auth: []
+  /ChallengeSynapse:
+    post:
+      summary: ''
+      description: ''
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+      security:
+      - sr25519_auth: []
+  /namespace:
+    post:
+      summary: "Namespace management \u2014 create, delete, rotate key. Localhost\
+        \ only."
+      description: "Namespace management \u2014 create, delete, rotate key. Localhost\
+        \ only."
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+      security:
+      - sr25519_auth: []
+  /AttestNamespace:
+    post:
+      summary: Attest a namespace to a Bittensor hotkey.
+      description: "POST /AttestNamespace\nBody: {\n  \"namespace\":    str,\n  \"\
+        owner_hotkey\": str (SS58),\n  \"signature\":    str (hex sr25519),\n  \"\
+        timestamp_ms\": int\n}\n\nAnyone can call this \u2014 but only the hotkey\
+        \ owner can produce a valid\nsignature, and the on-chain stake of that hotkey\
+        \ determines trust tier."
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+      security:
+      - sr25519_auth: []
+  /attestation/{namespace}:
+    get:
+      summary: return trust info for a namespace.
+      description: "GET /attestation/{namespace} \u2014 return trust info for a namespace."
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+      parameters:
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+  /chat-history/{user_id}:
+    get:
+      summary: "GET /chat-history/{user_id}?conv_id=X \u2014 load a user's chat history."
+      description: "GET /chat-history/{user_id}?conv_id=X \u2014 load a user's chat\
+        \ history."
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+  /chat-history:
+    post:
+      summary: save a user's chat history.
+      description: "POST /chat-history \u2014 save a user's chat history."
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+      security:
+      - sr25519_auth: []
+  /conversations/{user_id}:
+    get:
+      summary: list all conversations for a user.
+      description: "GET /conversations/{user_id} \u2014 list all conversations for\
+        \ a user."
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+  /conversations:
+    post:
+      summary: create a new conversation.
+      description: "POST /conversations \u2014 create a new conversation."
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+      security:
+      - sr25519_auth: []
+  /conversations/{conv_id}:
+    patch:
+      summary: rename a conversation.
+      description: "PATCH /conversations/{conv_id} \u2014 rename a conversation."
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+      parameters:
+      - name: conv_id
+        in: path
+        required: true
+        schema:
+          type: string
+    delete:
+      summary: "DELETE /conversations/{conv_id}?user_id=X \u2014 delete a conversation."
+      description: "DELETE /conversations/{conv_id}?user_id=X \u2014 delete a conversation."
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+      parameters:
+      - name: conv_id
+        in: path
+        required: true
+        schema:
+          type: string
+  /retrieve/{cid}:
+    get:
+      summary: return stored metadata for a CID.
+      description: "Public memories are freely readable.  Private namespace memories\
+        \ return\n404 regardless of whether the CID exists \u2014 callers must use\
+        \ an\nauthenticated query to access their own private data."
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+      parameters:
+      - name: cid
+        in: path
+        required: true
+        schema:
+          type: string
+    delete:
+      summary: permanently remove a stored memory.
+      description: 'Public memories require network auth (validator/miner hotkey via
+
+        verify_request).  Private namespace memories additionally require the
+
+        caller to prove namespace ownership via namespace_hotkey + namespace_sig
+
+        + namespace_timestamp_ms in the JSON body.'
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+      parameters:
+      - name: cid
+        in: path
+        required: true
+        schema:
+          type: string
+  /RepairSynapse:
+    post:
+      summary: return full embedding for a CID so the validator
+      description: can copy it to under-replicated miners.  Requires network auth.
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+      security:
+      - sr25519_auth: []
+  /KeyShareSynapse:
+    post:
+      summary: store a Shamir key share for a namespace.
+      description: 'Caller must prove namespace ownership via namespace_sig.  The
+        miner
+
+        stores one share per namespace and cannot reconstruct the full key alone.'
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+      security:
+      - sr25519_auth: []
+  /KeyShareRetrieve:
+    post:
+      summary: return this miner's share for a namespace.
+      description: 'Caller must prove namespace ownership via namespace_sig.  Returns
+        the
+
+        single share stored here; the client must collect K shares to reconstruct.'
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+      security:
+      - sr25519_auth: []
+  /list:
+    post:
+      summary: paginate and filter stored memories.
+      description: "Body (all optional):\n    filter                dict[str, str]\
+        \  metadata key/value pairs (AND match)\n    limit                 int   \
+        \          max results (default 50, max 200)\n    offset                int\
+        \             skip N records (default 0)\n    namespace             str  \
+        \           namespace to list (default public)\n    namespace_hotkey     \
+        \ str             required for private namespaces\n    namespace_sig     \
+        \    str             sr25519 ownership signature\n    namespace_timestamp_ms\
+        \ int            Unix ms timestamp for replay prevention"
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+      security:
+      - sr25519_auth: []
+  /health:
+    get:
+      summary: ''
+      description: ''
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+  /stats:
+    get:
+      summary: "Public stats endpoint \u2014 rich counters for the dashboard."
+      description: "Public stats endpoint \u2014 rich counters for the dashboard."
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+  /metagraph:
+    get:
+      summary: "Public metagraph snapshot \u2014 returns all registered neurons for\
+        \ the leaderboard."
+      description: "Public metagraph snapshot \u2014 returns all registered neurons\
+        \ for the leaderboard."
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+  /metrics:
+    get:
+      summary: "Prometheus metrics \u2014 localhost only to avoid leaking operational\
+        \ data."
+      description: "Prometheus metrics \u2014 localhost only to avoid leaking operational\
+        \ data."
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+  /wallet-stats:
+    get:
+      summary: ''
+      description: ''
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+  /wallet-stats/{hotkey}:
+    get:
+      summary: ''
+      description: ''
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+      parameters:
+      - name: hotkey
+        in: path
+        required: true
+        schema:
+          type: string
+  /commitment:
+    get:
+      summary: returns the Merkle root of this miner's full memory corpus.
+      description: 'AI agents and validators can use this root to verify that a specific
+
+        memory (cid, embedding_hash) is genuinely stored here without downloading
+
+        the full index.  The root changes whenever a memory is added or removed.'
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+  /prove-memory:
+    post:
+      summary: return a Merkle inclusion proof for one CID.
+      description: 'Body: {"cid": "v1::...", "embedding_hash": "<64-char hex>"}
+
+
+        AI agents use this to verify a specific memory is intact without
+
+        fetching the entire store.  Returns the proof as a JSON object that
+
+        can be verified offline with engram_core.verify_inclusion().'
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized - Auth signature invalid
+        '403':
+          description: Forbidden - Missing or invalid namespace signature
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+      security:
+      - sr25519_auth: []
