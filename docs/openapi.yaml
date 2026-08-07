@@ -1,0 +1,846 @@
+openapi: 3.0.3
+info:
+  title: Engram Miner API
+  description: |
+    OpenAPI specification for Engram miner HTTP endpoints.
+    
+    ## Authentication
+    Most endpoints require sr25519 signed challenge headers:
+    - `X-Signature`: sr25519 signature of the request
+    - `X-Timestamp`: Unix timestamp
+    - `X-Nonce`: Random nonce
+    
+    ## Rate Limiting
+    API calls are rate-limited per IP address.
+  version: 1.0.0
+  contact:
+    name: Engram Team
+    url: https://github.com/Dipraise1/Engram
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8090
+    description: Local development server
+  - url: https://miner.engram.space
+    description: Production server
+
+tags:
+  - name: Core
+    description: Core data operations (ingest, query, retrieve)
+  - name: Chat
+    description: Chat history and conversation management
+  - name: KeyShare
+    description: Key share storage and retrieval
+  - name: Namespace
+    description: Namespace management and attestation
+  - name: System
+    description: Health checks, stats, and monitoring
+
+paths:
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      description: Liveness probe for the miner service
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: integer
+                    format: int64
+                  version:
+                    type: string
+                    example: "1.0.0"
+
+  /IngestSynapse:
+    post:
+      tags: [Core]
+      summary: Ingest data
+      description: Store embedding and return CID
+      operationId: ingestSynapse
+      security:
+        - sr25519Auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IngestRequest'
+      responses:
+        '200':
+          description: Data ingested successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /QuerySynapse:
+    post:
+      tags: [Core]
+      summary: Query data
+      description: ANN search, return top-K results
+      operationId: querySynapse
+      security:
+        - sr25519Auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryRequest'
+      responses:
+        '200':
+          description: Query results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /ChallengeSynapse:
+    post:
+      tags: [Core]
+      summary: Storage proof challenge
+      description: Storage proof response using validator's nonce
+      operationId: challengeSynapse
+      security:
+        - sr25519Auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChallengeRequest'
+      responses:
+        '200':
+          description: Challenge response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChallengeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /retrieve/{cid}:
+    get:
+      tags: [Core]
+      summary: Retrieve data
+      description: Retrieve data by CID
+      operationId: retrieveData
+      parameters:
+        - name: cid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Content identifier
+      responses:
+        '200':
+          description: Retrieved data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cid:
+                    type: string
+                  data:
+                    type: object
+                  timestamp:
+                    type: integer
+                    format: int64
+        '404':
+          description: Data not found
+    delete:
+      tags: [Core]
+      summary: Delete data
+      description: Delete data by CID
+      operationId: deleteData
+      security:
+        - sr25519Auth: []
+      parameters:
+        - name: cid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Content identifier
+      responses:
+        '200':
+          description: Data deleted
+        '404':
+          description: Data not found
+
+  /RepairSynapse:
+    post:
+      tags: [Core]
+      summary: Repair retrieve
+      description: Repair and retrieve data
+      operationId: repairSynapse
+      security:
+        - sr25519Auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cid:
+                  type: string
+                repair_type:
+                  type: string
+                  enum: [full, partial, verify]
+      responses:
+        '200':
+          description: Repair completed
+        '404':
+          description: Data not found
+
+  /list:
+    post:
+      tags: [Core]
+      summary: List data
+      description: List stored data with filters
+      operationId: listData
+      security:
+        - sr25519Auth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                limit:
+                  type: integer
+                  default: 100
+                offset:
+                  type: integer
+                  default: 0
+                namespace:
+                  type: string
+      responses:
+        '200':
+          description: List of data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+
+  /conversations:
+    get:
+      tags: [Chat]
+      summary: List conversations
+      description: Get conversations for a user
+      operationId: listConversations
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Conversation'
+    post:
+      tags: [Chat]
+      summary: Create conversation
+      description: Create a new conversation
+      operationId: createConversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateConversationRequest'
+      responses:
+        '201':
+          description: Conversation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+
+  /conversations/{conv_id}:
+    patch:
+      tags: [Chat]
+      summary: Update conversation
+      description: Update conversation metadata
+      operationId: updateConversation
+      parameters:
+        - name: conv_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                metadata:
+                  type: object
+      responses:
+        '200':
+          description: Conversation updated
+    delete:
+      tags: [Chat]
+      summary: Delete conversation
+      description: Delete a conversation
+      operationId: deleteConversation
+      parameters:
+        - name: conv_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Conversation deleted
+
+  /chat-history:
+    post:
+      tags: [Chat]
+      summary: Add chat history
+      description: Add a message to chat history
+      operationId: addChatHistory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatMessage'
+      responses:
+        '201':
+          description: Message added
+
+  /chat-history/{user_id}:
+    get:
+      tags: [Chat]
+      summary: Get chat history
+      description: Get chat history for a user
+      operationId: getChatHistory
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Chat history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ChatMessage'
+
+  /namespace:
+    post:
+      tags: [Namespace]
+      summary: Create namespace
+      description: Create a new namespace
+      operationId: createNamespace
+      security:
+        - sr25519Auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                public:
+                  type: boolean
+                  default: false
+      responses:
+        '201':
+          description: Namespace created
+
+  /AttestNamespace:
+    post:
+      tags: [Namespace]
+      summary: Attest namespace
+      description: Create attestation for a namespace
+      operationId: attestNamespace
+      security:
+        - sr25519Auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - namespace
+              properties:
+                namespace:
+                  type: string
+                attestation_data:
+                  type: object
+      responses:
+        '200':
+          description: Attestation created
+
+  /attestation/{namespace}:
+    get:
+      tags: [Namespace]
+      summary: Get attestation
+      description: Get attestation for a namespace
+      operationId: getAttestation
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Attestation data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  namespace:
+                    type: string
+                  attestation:
+                    type: object
+                  timestamp:
+                    type: integer
+                    format: int64
+
+  /KeyShareSynapse:
+    post:
+      tags: [KeyShare]
+      summary: Store key share
+      description: Store a key share
+      operationId: storeKeyShare
+      security:
+        - sr25519Auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KeyShareRequest'
+      responses:
+        '200':
+          description: Key share stored
+
+  /KeyShareRetrieve:
+    post:
+      tags: [KeyShare]
+      summary: Retrieve key share
+      description: Retrieve a key share
+      operationId: retrieveKeyShare
+      security:
+        - sr25519Auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - key_id
+              properties:
+                key_id:
+                  type: string
+      responses:
+        '200':
+          description: Key share data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  key_id:
+                    type: string
+                  share:
+                    type: string
+                  metadata:
+                    type: object
+
+  /stats:
+    get:
+      tags: [System]
+      summary: Get stats
+      description: Get miner statistics
+      operationId: getStats
+      responses:
+        '200':
+          description: Miner statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_ingested:
+                    type: integer
+                  total_queries:
+                    type: integer
+                  uptime_seconds:
+                    type: integer
+                  storage_used_bytes:
+                    type: integer
+
+  /metagraph:
+    get:
+      tags: [System]
+      summary: Get metagraph
+      description: Get network metagraph information
+      operationId: getMetagraph
+      responses:
+        '200':
+          description: Metagraph data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  neurons:
+                    type: array
+                    items:
+                      type: object
+                  network:
+                    type: string
+                  block:
+                    type: integer
+
+  /metrics:
+    get:
+      tags: [System]
+      summary: Get metrics
+      description: Get Prometheus-compatible metrics (localhost only)
+      operationId: getMetrics
+      responses:
+        '200':
+          description: Prometheus metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /wallet-stats:
+    get:
+      tags: [System]
+      summary: Get wallet stats
+      description: Get wallet statistics
+      operationId: getWalletStats
+      responses:
+        '200':
+          description: Wallet statistics
+
+  /wallet-stats/{hotkey}:
+    get:
+      tags: [System]
+      summary: Get wallet stats by hotkey
+      description: Get statistics for a specific wallet
+      operationId: getWalletStatsByHotkey
+      parameters:
+        - name: hotkey
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Wallet statistics
+
+  /commitment:
+    get:
+      tags: [System]
+      summary: Get commitment
+      description: Get miner commitment information
+      operationId: getCommitment
+      responses:
+        '200':
+          description: Commitment data
+
+  /prove-memory:
+    post:
+      tags: [System]
+      summary: Prove memory
+      description: Generate memory proof
+      operationId: proveMemory
+      security:
+        - sr25519Auth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                memory_size:
+                  type: integer
+                proof_type:
+                  type: string
+                  enum: [basic, advanced, zk]
+      responses:
+        '200':
+          description: Memory proof generated
+
+components:
+  securitySchemes:
+    sr25519Auth:
+      type: apiKey
+      in: header
+      name: X-Signature
+      description: |
+        sr25519 signed challenge header.
+        
+        Include these headers:
+        - `X-Signature`: sr25519 signature
+        - `X-Timestamp`: Unix timestamp
+        - `X-Nonce`: Random nonce
+
+  schemas:
+    IngestRequest:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: string
+          description: Data to ingest (base64 encoded)
+        namespace:
+          type: string
+          description: Optional namespace
+        metadata:
+          type: object
+          description: Optional metadata
+
+    IngestResponse:
+      type: object
+      properties:
+        cid:
+          type: string
+          description: Content identifier
+        timestamp:
+          type: integer
+          format: int64
+        size_bytes:
+          type: integer
+
+    QueryRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          description: Query string
+        top_k:
+          type: integer
+          default: 10
+          description: Number of results to return
+        namespace:
+          type: string
+          description: Optional namespace filter
+
+    QueryResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              cid:
+                type: string
+              score:
+                type: number
+                format: float
+              data:
+                type: object
+        total:
+          type: integer
+
+    ChallengeRequest:
+      type: object
+      required:
+        - nonce
+      properties:
+        nonce:
+          type: string
+          description: Validator nonce (hex)
+        cid:
+          type: string
+          description: Content identifier to prove
+        validator_hotkey:
+          type: string
+          description: Validator hotkey (hex)
+
+    ChallengeResponse:
+      type: object
+      properties:
+        embedding_hash:
+          type: string
+        proof:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        title:
+          type: string
+        created_at:
+          type: integer
+          format: int64
+        updated_at:
+          type: integer
+          format: int64
+        metadata:
+          type: object
+
+    CreateConversationRequest:
+      type: object
+      required:
+        - user_id
+      properties:
+        user_id:
+          type: string
+        title:
+          type: string
+        metadata:
+          type: object
+
+    ChatMessage:
+      type: object
+      required:
+        - user_id
+        - content
+      properties:
+        user_id:
+          type: string
+        conversation_id:
+          type: string
+        role:
+          type: string
+          enum: [user, assistant, system]
+        content:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+
+    KeyShareRequest:
+      type: object
+      required:
+        - key_id
+        - share
+      properties:
+        key_id:
+          type: string
+        share:
+          type: string
+        metadata:
+          type: object
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        code:
+          type: integer
+
+  responses:
+    Unauthorized:
+      description: Authentication failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Unauthorized"
+            message: "Invalid signature"
+            code: 401
+
+    RateLimited:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Too Many Requests"
+            message: "Rate limit exceeded"
+            code: 429
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Internal Server Error"
+            message: "An unexpected error occurred"
+            code: 500
+
+security:
+  - sr25519Auth: []

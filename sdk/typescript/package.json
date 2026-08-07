@@ -1,0 +1,46 @@
+{
+  "name": "@engram/client",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for Engram decentralized knowledge graph",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "engram",
+    "knowledge-graph",
+    "vector-database",
+    "decentralized"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/pdf-parse": "^1.1.4",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  },
+  "dependencies": {
+    "pdf-parse": "^1.1.1"
+  },
+  "optionalDependencies": {
+    "@polkadot/util-crypto": "^13.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
