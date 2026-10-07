@@ -418,6 +418,8 @@ engram/
 |-------|-------------|
 | [docs/architecture.md](docs/architecture.md) | System design, data flows, Arweave integration |
 | [docs/miner.md](docs/miner.md) | Miner setup, configuration, systemd, Docker |
+| [docs/openapi.json](docs/openapi.json) | OpenAPI 3.1 spec for miner HTTP endpoints |
+| [docs/miner-openapi.html](docs/miner-openapi.html) | Redoc viewer for the miner HTTP API |
 | [docs/validator.md](docs/validator.md) | Validator setup and scoring loop |
 | [docs/sdk.md](docs/sdk.md) | Python SDK full reference |
 | [docs/cli.md](docs/cli.md) | CLI command reference |

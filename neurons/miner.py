@@ -45,6 +45,7 @@ from engram.miner.wallet_tracker import WalletTracker
 from engram.miner.store import build_store
 from engram.miner.http_synapses import ingest_synapse_from_body, query_synapse_from_body
 from engram.miner.key_share_store import KeyShareStore
+from engram.miner.openapi import MINER_HTTP_ROUTES
 from engram.protocol import IngestSynapse, QuerySynapse
 from engram.storage.dht import DHTRouter, Peer
 from engram.storage.replication import ReplicationManager
@@ -1276,32 +1277,35 @@ async def run() -> None:
     # Prevents OOM from oversized request bodies.
     _MAX_BODY = int(os.getenv("MINER_MAX_BODY_BYTES", str(10 * 1024 * 1024)))
     app = web.Application(client_max_size=_MAX_BODY)
-    app.router.add_post("/IngestSynapse",           handle_ingest)
-    app.router.add_post("/QuerySynapse",            handle_query)
-    app.router.add_post("/ChallengeSynapse",        handle_challenge)
-    app.router.add_post("/namespace",               handle_namespace)
-    app.router.add_post("/AttestNamespace",         handle_attest)
-    app.router.add_get("/attestation/{namespace}",  handle_attestation_get)
-    app.router.add_get("/chat-history/{user_id}",   handle_chat_history_get)
-    app.router.add_post("/chat-history",            handle_chat_history_post)
-    app.router.add_get("/conversations/{user_id}",  handle_conversations_get)
-    app.router.add_post("/conversations",           handle_conversations_post)
-    app.router.add_patch("/conversations/{conv_id}", handle_conversations_patch)
-    app.router.add_delete("/conversations/{conv_id}", handle_conversations_delete)
-    app.router.add_get("/retrieve/{cid}",           handle_retrieve)
-    app.router.add_delete("/retrieve/{cid}",        handle_delete)
-    app.router.add_post("/RepairSynapse",           handle_repair_retrieve)
-    app.router.add_post("/KeyShareSynapse",         handle_key_share_store)
-    app.router.add_post("/KeyShareRetrieve",        handle_key_share_retrieve)
-    app.router.add_post("/list",                    handle_list)
-    app.router.add_get("/health",                   handle_health)
-    app.router.add_get("/stats",                    handle_stats)
-    app.router.add_get("/metagraph",                handle_metagraph)
-    app.router.add_get("/metrics",                  handle_metrics)
-    app.router.add_get("/wallet-stats",             handle_wallet_stats)
-    app.router.add_get("/wallet-stats/{hotkey}",    handle_wallet_stats)
-    app.router.add_get("/commitment",               handle_commitment)
-    app.router.add_post("/prove-memory",            handle_prove_memory)
+    handlers = {
+        "handle_ingest": handle_ingest,
+        "handle_query": handle_query,
+        "handle_challenge": handle_challenge,
+        "handle_namespace": handle_namespace,
+        "handle_attest": handle_attest,
+        "handle_attestation_get": handle_attestation_get,
+        "handle_chat_history_get": handle_chat_history_get,
+        "handle_chat_history_post": handle_chat_history_post,
+        "handle_conversations_get": handle_conversations_get,
+        "handle_conversations_post": handle_conversations_post,
+        "handle_conversations_patch": handle_conversations_patch,
+        "handle_conversations_delete": handle_conversations_delete,
+        "handle_retrieve": handle_retrieve,
+        "handle_delete": handle_delete,
+        "handle_repair_retrieve": handle_repair_retrieve,
+        "handle_key_share_store": handle_key_share_store,
+        "handle_key_share_retrieve": handle_key_share_retrieve,
+        "handle_list": handle_list,
+        "handle_health": handle_health,
+        "handle_stats": handle_stats,
+        "handle_metagraph": handle_metagraph,
+        "handle_metrics": handle_metrics,
+        "handle_wallet_stats": handle_wallet_stats,
+        "handle_commitment": handle_commitment,
+        "handle_prove_memory": handle_prove_memory,
+    }
+    for route in MINER_HTTP_ROUTES:
+        getattr(app.router, f"add_{route.method}")(route.path, handlers[route.handler])
 
     runner = web.AppRunner(app, keepalive_timeout=15)
     await runner.setup()
