@@ -1,0 +1,99 @@
+openapi: 3.0.3
+info:
+  title: Engram Miner HTTP API
+  version: 1.0.0
+  description: |
+    Plain JSON HTTP API (aiohttp) for Engram miners.
+    Includes support for `sr25519` signed-challenge authentication headers.
+servers:
+  - url: http://localhost:8091
+    description: Local Miner Node
+paths:
+  /health:
+    get:
+      summary: Liveness probe
+      description: Returns health status of the miner node.
+      responses:
+        '200':
+          description: Miner is healthy
+  /IngestSynapse:
+    post:
+      summary: Store embedding
+      description: Store embedding, return CID. Requires `sr25519` signed-challenge headers.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [raw_embedding, metadata]
+              properties:
+                raw_embedding:
+                  type: array
+                  items:
+                    type: number
+                metadata:
+                  type: object
+      responses:
+        '200':
+          description: Successfully stored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cid:
+                    type: string
+                  error:
+                    type: string
+        '401':
+          description: Authentication error
+        '429':
+          description: Rate limited
+  /QuerySynapse:
+    post:
+      summary: ANN Search
+      description: Performs Approximate Nearest Neighbor search across stored embeddings.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Search results
+  /retrieve/{cid}:
+    get:
+      summary: Get stored metadata
+      description: Returns stored metadata for a given CID (Public namespace only).
+      parameters:
+        - name: cid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Metadata found
+        '404':
+          description: Not found
+    delete:
+      summary: Delete stored memory
+      description: Permanently remove a stored memory. Requires network and namespace auth.
+      parameters:
+        - name: cid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully deleted
+  /RepairSynapse:
+    post:
+      summary: Repair / Replicate retrieval
+      description: Returns full embedding for a CID so validators can repair under-replicated miners.
+      responses:
+        '200':
+          description: Full record returned
