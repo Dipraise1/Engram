@@ -1,0 +1,62 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Engram Miner API",
+    "description": "Machine-readable spec for Engram Miner HTTP endpoints (Subnet 450).",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/ingest": {
+      "post": {
+        "summary": "Ingest Data",
+        "description": "Store text, images, or PDFs into the miner's semantic memory.",
+        "responses": {
+          "200": { "description": "Successful ingestion" },
+          "401": { "description": "Signature verification failed" }
+        }
+      }
+    },
+    "/query": {
+      "post": {
+        "summary": "Query Memory",
+        "description": "Retrieve semantic memory based on vector similarity.",
+        "responses": {
+          "200": { "description": "Query results" }
+        }
+      }
+    },
+    "/KeyShareSynapse": {
+      "post": {
+        "summary": "Store Key Share",
+        "description": "Part of the Shamir threshold decryption protocol.",
+        "responses": {
+          "200": { "description": "Share stored" }
+        }
+      }
+    },
+    "/KeyShareRetrieve": {
+      "post": {
+        "summary": "Retrieve Key Share",
+        "description": "Retrieve a previously stored key share for decryption.",
+        "responses": {
+          "200": { "description": "Share retrieved" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BittensorAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "B-Signature",
+        "description": "sr25519 signature. Must be accompanied by B-Hotkey and B-Nonce."
+      }
+    }
+  },
+  "security": [
+    {
+      "BittensorAuth": []
+    }
+  ]
+}
